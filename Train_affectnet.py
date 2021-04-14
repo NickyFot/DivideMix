@@ -37,6 +37,8 @@ parser.add_argument('--cls', dest='cls', action='store_true', help="train on cla
 parser.set_defaults(cls=False)
 parser.add_argument('--var', dest='var', action='store_true', help="train on kldiv task")
 parser.set_defaults(var=False)
+parser.add_argument('--balance', dest='balance', action='store_true', help="balance samples in batch loading")
+parser.set_defaults(balance=False)
 
 args = parser.parse_args()
 
