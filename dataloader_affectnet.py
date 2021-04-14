@@ -78,8 +78,11 @@ class AffectNet():
         self.reset_indices()
         self.create_pools()
 
-    def __itter__(self):
+    def __iter__(self):
         return self.get_batch(self.batch_size)
+
+    def __len__(self):
+        return self.N_samples
 
     def augment_new(self, image):
 

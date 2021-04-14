@@ -27,8 +27,8 @@ parser.add_argument('--r', default=0.5, type=float, help='noise ratio')
 parser.add_argument('--id', default='')
 parser.add_argument('--seed', default=123)
 parser.add_argument('--gpuid', default=0, type=int)
-parser.add_argument('--num_class', default=10, type=int)
-parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to dataset')
+parser.add_argument('--num_class', default=2, type=int)
+# parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to dataset')
 # parser.add_argument('--dataset', default='cifar10', type=str)
 args = parser.parse_args()
 
@@ -229,10 +229,7 @@ def create_model():
 stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
 test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-if args.dataset == 'cifar10':
-    warm_up = 10
-elif args.dataset == 'cifar100':
-    warm_up = 30
+warm_up = 30
 
 args, cfg = dataloader.init_args_cfg(args)
 loader = dataloader.affectnet_dataloader(args, cfg, 'train').run()
@@ -246,8 +243,8 @@ criterion = SemiLoss()
 optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 
-CE = nn.CrossEntropyLoss(reduction='none')
-CEloss = nn.CrossEntropyLoss()
+CE = nn.MSELoss(reduction='none')
+CEloss = nn.MSELoss()
 if args.noise_mode == 'asym':
     conf_penalty = NegEntropy()
 
@@ -287,5 +284,3 @@ for epoch in range(args.num_epochs + 1):
         train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader)  # train net2
 
     test(epoch, net1, net2)
-
-
