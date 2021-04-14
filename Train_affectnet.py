@@ -39,6 +39,8 @@ parser.add_argument('--var', dest='var', action='store_true', help="train on kld
 parser.set_defaults(var=False)
 parser.add_argument('--balance', dest='balance', action='store_true', help="balance samples in batch loading")
 parser.set_defaults(balance=False)
+parser.add_argument('--remote', dest='remote', action='store_true', help="use remote directories or not")
+parser.set_defaults(remote=False)
 
 args = parser.parse_args()
 
