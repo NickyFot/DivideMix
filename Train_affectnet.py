@@ -30,6 +30,14 @@ parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=2, type=int)
 parser.add_argument('--data_path', default='', type=str, help='path to dataset')
 parser.add_argument('--dataset', default='affectnet', type=str)
+parser.add_argument('--regression', dest='regression', action='store_true',
+                    help="train on regression task, using the dimensional A/V model")
+parser.set_defaults(regression=False)
+parser.add_argument('--cls', dest='cls', action='store_true', help="train on classification task")
+parser.set_defaults(cls=False)
+parser.add_argument('--var', dest='var', action='store_true', help="train on kldiv task")
+parser.set_defaults(var=False)
+
 args = parser.parse_args()
 
 torch.cuda.set_device(args.gpuid)
