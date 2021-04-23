@@ -79,7 +79,7 @@ class AffectNet(Dataset):
         if filter_expressions:
             new_img = list()
             new_annot = list()
-            for idx, datum in self.data['annotations']:
+            for idx, datum in enumerate(self.data['annotations']):
                 expression = datum['expression']
                 if expression in filter_expressions:
                     new_img.append(self.data['images'][idx])
@@ -89,7 +89,7 @@ class AffectNet(Dataset):
         if partition:
             clean = list()
             noisy = list()
-            for idx, datum in self.data['annotations']:
+            for idx, datum in enumerate(self.data['annotations']):
                 expression = datum['expression']
                 arousal = datum['arousal']
                 valence = datum['valence']
