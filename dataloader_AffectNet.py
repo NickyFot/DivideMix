@@ -21,7 +21,7 @@ class AffectNet(Dataset):
             probability: list = None,
             **kwargs
     ):
-        self.root = root_dir+'Manually_annotated/extracted_cropped'
+        self.root = root_dir
         self.annotation_path = os.path.join(*[root_dir, 'Manually_Annotated', annotation_filename])
         self.transform = img_transform
         self.target_transform = target_transform
