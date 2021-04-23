@@ -193,7 +193,7 @@ def eval_train(model, all_loss):
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs = model(inputs)
-            loss = MSE(outputs, targets)
+            loss = MSE(outputs, targets).mean(dim=1)
             for b in range(inputs.size(0)):
                 losses[index[b]] = loss[b]
     losses = (losses - losses.min()) / (losses.max() - losses.min())
