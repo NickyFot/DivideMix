@@ -17,8 +17,8 @@ class AffectNet(Dataset):
             target_transform: transforms,
             annotation_filename: str,
             mode: str = None,
-            pred: list = [],
-            probability: list = [],
+            pred: list = None,
+            probability: list = None,
             **kwargs
     ):
         self.root = root_dir+'Manually_annotated/extracted_cropped'
@@ -84,8 +84,8 @@ class AffectNet(Dataset):
                 if expression in filter_expressions:
                     new_img.append(self.data['images'][idx])
                     new_annot.append(self.data['annotations'][idx])
-                self.data['images'] = new_img
-                self.data['annotations'] = new_annot
+            self.data['images'] = new_img
+            self.data['annotations'] = new_annot
         if partition:
             clean = list()
             noisy = list()
