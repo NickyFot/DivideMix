@@ -12,7 +12,7 @@ import numpy as np
 from PreResNet import *
 from sklearn.mixture import GaussianMixture
 
-import dataloader_affectnet as dataloader
+import dataloader_AffectNet as dataloader
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
 parser.add_argument('--batch_size', default=64, type=int, help='train batchsize')
@@ -66,8 +66,8 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
         batch_size = inputs_x.size(0)
 
         # Transform label to one-hot
-        labels_x = torch.zeros(batch_size, args.num_class).scatter_(1, labels_x.view(-1, 1), 1)
-        w_x = w_x.view(-1, 1).type(torch.FloatTensor)
+        # labels_x = torch.zeros(batch_size, args.num_class).scatter_(1, labels_x.view(-1, 1), 1)
+        # w_x = w_x.view(-1, 1).type(torch.FloatTensor)
 
         inputs_x, inputs_x2, labels_x, w_x = inputs_x.cuda(), inputs_x2.cuda(), labels_x.cuda(), w_x.cuda()
         inputs_u, inputs_u2 = inputs_u.cuda(), inputs_u2.cuda()
@@ -79,26 +79,32 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             outputs_u21 = net2(inputs_u)
             outputs_u22 = net2(inputs_u2)
 
-            pu = (torch.softmax(outputs_u11, dim=1) + torch.softmax(outputs_u12, dim=1) + torch.softmax(outputs_u21,
-                                                                                                        dim=1) + torch.softmax(
-                outputs_u22, dim=1)) / 4
-            ptu = pu ** (1 / args.T)  # temparature sharpening
-
-            targets_u = ptu / ptu.sum(dim=1, keepdim=True)  # normalize
+            # region classification sharpening
+            # pu = (torch.softmax(outputs_u11, dim=1) + torch.softmax(outputs_u12, dim=1) + torch.softmax(outputs_u21,
+            #                                                                                             dim=1) + torch.softmax(
+            #     outputs_u22, dim=1)) / 4
+            # ptu = pu ** (1 / args.T)  # temparature sharpening
+            #
+            # targets_u = ptu / ptu.sum(dim=1, keepdim=True)  # normalize
+            # endregion
+            targets_u = (outputs_u11 + outputs_u12 + outputs_u21 + outputs_u22)/4
             targets_u = targets_u.detach()
 
             # label refinement of labeled samples
             outputs_x = net(inputs_x)
             outputs_x2 = net(inputs_x2)
 
-            px = (torch.softmax(outputs_x, dim=1) + torch.softmax(outputs_x2, dim=1)) / 2
-            px = w_x * labels_x + (1 - w_x) * px
-            ptx = px ** (1 / args.T)  # temparature sharpening
-
-            targets_x = ptx / ptx.sum(dim=1, keepdim=True)  # normalize
+            # region classification sharpening
+            # px = (torch.softmax(outputs_x, dim=1) + torch.softmax(outputs_x2, dim=1)) / 2
+            # px = w_x * labels_x + (1 - w_x) * px
+            # ptx = px ** (1 / args.T)  # temparature sharpening
+            #
+            # targets_x = ptx / ptx.sum(dim=1, keepdim=True)  # normalize
+            # endregion
+            targets_x = (outputs_x + outputs_x2)/2
             targets_x = targets_x.detach()
 
-            # mixmatch
+        # mixmatch
         l = np.random.beta(args.alpha, args.alpha)
         l = max(l, 1 - l)
 
@@ -121,12 +127,12 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
                                  epoch + batch_idx / num_iter, warm_up)
 
         # regularization
-        prior = torch.ones(args.num_class) / args.num_class
-        prior = prior.cuda()
-        pred_mean = torch.softmax(logits, dim=1).mean(0)
-        penalty = torch.sum(prior * torch.log(prior / pred_mean))
+        # prior = torch.ones(args.num_class) / args.num_class
+        # prior = prior.cuda()
+        # pred_mean = torch.softmax(logits, dim=1).mean(0)
+        # penalty = torch.sum(prior * torch.log(prior / pred_mean))
 
-        loss = Lx + lamb * Lu + penalty
+        loss = Lx + lamb * Lu #+ penalty
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
@@ -142,21 +148,16 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
 def warmup(epoch, net, optimizer, dataloader):
     net.train()
     num_iter = (len(dataloader.dataset) // dataloader.batch_size) + 1
-    for batch_idx, (inputs, labels, path) in enumerate(dataloader):
+    for batch_idx, (inputs, labels, _) in enumerate(dataloader):
         inputs, labels = inputs.cuda(), labels.cuda()
         optimizer.zero_grad()
         outputs = net(inputs)
-        loss = CEloss(outputs, labels)
-        if args.noise_mode == 'asym':  # penalize confident prediction for asymmetric noise
-            penalty = conf_penalty(outputs)
-            L = loss + penalty
-        elif args.noise_mode == 'sym':
-            L = loss
-        L.backward()
+        loss = MSEloss(outputs, labels)
+        loss.backward()
         optimizer.step()
 
         sys.stdout.write('\r')
-        sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t CE-loss: %.4f'
+        sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t MSE-loss: %.4f'
                          % (args.dataset, args.r, args.noise_mode, epoch, args.num_epochs, batch_idx + 1, num_iter,
                             loss.item()))
         sys.stdout.flush()
@@ -165,21 +166,23 @@ def warmup(epoch, net, optimizer, dataloader):
 def test(epoch, net1, net2):
     net1.eval()
     net2.eval()
-    correct = 0
-    total = 0
+    true = list()
+    pred = list()
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs1 = net1(inputs)
             outputs2 = net2(inputs)
             outputs = outputs1 + outputs2
-            _, predicted = torch.max(outputs, 1)
-
-            total += targets.size(0)
-            correct += predicted.eq(targets).cpu().sum().item()
-    acc = 100. * correct / total
-    print("\n| Test Epoch #%d\t Accuracy: %.2f%%\n" % (epoch, acc))
-    test_log.write('Epoch:%d   Accuracy:%.2f\n' % (epoch, acc))
+            predicted = torch.mean(outputs, 1)
+            true.append(targets)
+            pred.append(predicted)
+    true = torch.vstack(true)
+    pred = torch.vstack(pred)
+    rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
+    pcc = 0 #TODO: fix pcc
+    print("\n| Test Epoch #%d\t RMSE: %.2f%%\n" % (epoch, rmse))
+    test_log.write('Epoch:%d   RMSE:%.2f\n' % (epoch, rmse))
     test_log.flush()
 
 
@@ -190,7 +193,7 @@ def eval_train(model, all_loss):
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs = model(inputs)
-            loss = CE(outputs, targets)
+            loss = MSE(outputs, targets)
             for b in range(inputs.size(0)):
                 losses[index[b]] = loss[b]
     losses = (losses - losses.min()) / (losses.max() - losses.min())
@@ -218,18 +221,10 @@ def linear_rampup(current, warm_up, rampup_length=16):
 
 class SemiLoss(object):
     def __call__(self, outputs_x, targets_x, outputs_u, targets_u, epoch, warm_up):
-        probs_u = torch.softmax(outputs_u, dim=1)
-
-        Lx = -torch.mean(torch.sum(F.log_softmax(outputs_x, dim=1) * targets_x, dim=1))
-        Lu = torch.mean((probs_u - targets_u) ** 2)
+        Lx = torch.sqrt(torch.mean((outputs_u - targets_u) ** 2))
+        Lu = torch.sqrt(torch.mean((outputs_x - targets_x) ** 2))
 
         return Lx, Lu, linear_rampup(epoch, warm_up)
-
-
-class NegEntropy(object):
-    def __call__(self, outputs):
-        probs = torch.softmax(outputs, dim=1)
-        return torch.mean(torch.sum(probs.log() * probs, dim=1))
 
 
 def create_model():
@@ -238,61 +233,63 @@ def create_model():
     return model
 
 
-stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
-test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
+if __name__ == '__main__':
+    stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
+    test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-warm_up = 30
+    warm_up = 30
 
-args, cfg = dataloader.init_args_cfg(args)
-loader = dataloader.affectnet_dataloader(args, cfg, 'train').run()
+    print('| Building net')
+    net1 = create_model()
+    net2 = create_model()
+    cudnn.benchmark = True
 
-print('| Building net')
-net1 = create_model()
-net2 = create_model()
-cudnn.benchmark = True
+    criterion = SemiLoss()
+    optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+    optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 
-criterion = SemiLoss()
-optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+    MSE = nn.MSELoss(reduction='none')
+    MSEloss = nn.MSELoss()
 
-CE = nn.MSELoss(reduction='none')
-CEloss = nn.MSELoss()
-if args.noise_mode == 'asym':
-    conf_penalty = NegEntropy()
+    all_loss = [[], []]  # save the history of losses from two networks
 
-all_loss = [[], []]  # save the history of losses from two networks
+    for epoch in range(args.num_epochs + 1):
+        lr = args.lr
+        if epoch >= 150:
+            lr /= 10
+        for param_group in optimizer1.param_groups:
+            param_group['lr'] = lr
+        for param_group in optimizer2.param_groups:
+            param_group['lr'] = lr
+        loader = dataloader.AffectNetDataloader(
+            batch_size=args.batch_size,
+            num_workers=5,
+            root_dir=args.data_path,
+            log=stats_log
+        )
+        eval_loader = loader.run(mode='eval_train')
+        test_loader = loader.run(mode='test')
 
-for epoch in range(args.num_epochs + 1):
-    lr = args.lr
-    if epoch >= 150:
-        lr /= 10
-    for param_group in optimizer1.param_groups:
-        param_group['lr'] = lr
-    for param_group in optimizer2.param_groups:
-        param_group['lr'] = lr
-    test_loader = dataloader.affectnet_dataloader(args, cfg, 'val').run()
-    eval_loader = dataloader.affectnet_dataloader(args, cfg, 'val').run()
+        if epoch < warm_up:
+            warmup_trainloader = loader.run('warmup')
+            print('Warmup Net1')
+            warmup(epoch, net1, optimizer1, warmup_trainloader)
+            print('\nWarmup Net2')
+            warmup(epoch, net2, optimizer2, warmup_trainloader)
 
-    if epoch < warm_up:
-        warmup_trainloader = loader.run('warmup')
-        print('Warmup Net1')
-        warmup(epoch, net1, optimizer1, warmup_trainloader)
-        print('\nWarmup Net2')
-        warmup(epoch, net2, optimizer2, warmup_trainloader)
+        else:
+            prob1, all_loss[0] = eval_train(net1, all_loss[0])
+            prob2, all_loss[1] = eval_train(net2, all_loss[1])
 
-    else:
-        prob1, all_loss[0] = eval_train(net1, all_loss[0])
-        prob2, all_loss[1] = eval_train(net2, all_loss[1])
+            pred1 = (prob1 > args.p_threshold)
+            pred2 = (prob2 > args.p_threshold)
 
-        pred1 = (prob1 > args.p_threshold)
-        pred2 = (prob2 > args.p_threshold)
+            print('Train Net1')
+            labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred2, prob=prob2)  # co-divide
+            train(epoch, net1, net2, optimizer1, labeled_trainloader, unlabeled_trainloader)  # train net1
 
-        print('Train Net1')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred2, prob2)  # co-divide
-        train(epoch, net1, net2, optimizer1, labeled_trainloader, unlabeled_trainloader)  # train net1
+            print('\nTrain Net2')
+            labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred1, prob=prob1)  # co-divide
+            train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader)  # train net2
 
-        print('\nTrain Net2')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred1, prob1)  # co-divide
-        train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader)  # train net2
-
-    test(epoch, net1, net2)
+        test(epoch, net1, net2)
