@@ -150,7 +150,7 @@ class AffectNetDataloader(object):
                 img_transform=self.transform_train,
                 annotation_filename='affectnet_annotations_train_all_regression_ext_det.json',
                 target_transform=self.target_transform,
-                filter_expression=self.filter_expression
+                filter_expressions=self.filter_expression
             )
             trainloader = DataLoader(
                 dataset=all_dataset,
@@ -170,7 +170,7 @@ class AffectNetDataloader(object):
                 mode='labeled',
                 pred=pred,
                 probability=prob,
-                filter_expression=self.filter_expression
+                filter_expressions=self.filter_expression
             )
             unlabeled_dataset = AffectNet(
                 self.root_dir,
@@ -180,7 +180,7 @@ class AffectNetDataloader(object):
                 mode='unlabeled',
                 pred=pred,
                 probability=prob,
-                filter_expression=self.filter_expression
+                filter_expressions=self.filter_expression
             )
             labeledloader = DataLoader(
                 dataset=labeled_dataset,
@@ -203,7 +203,7 @@ class AffectNetDataloader(object):
                 img_transform=self.transform_train,
                 annotation_filename='affectnet_annotations_val_all_regression_ext_det.json',
                 target_transform=self.target_transform,
-                filter_expression=self.filter_expression
+                filter_expressions=self.filter_expression
             )
             testloader = DataLoader(
                 dataset=test_dataset,
@@ -219,7 +219,7 @@ class AffectNetDataloader(object):
                 img_transform=self.transform_train,
                 annotation_filename='affectnet_annotations_train_all_regression_ext_det.json',
                 target_transform=self.target_transform,
-                filter_expression=self.filter_expression
+                filter_expressions=self.filter_expression
             )
             evalloader = DataLoader(
                 dataset=eval_dataset,
