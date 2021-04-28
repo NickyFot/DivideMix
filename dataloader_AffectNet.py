@@ -9,6 +9,15 @@ from PIL import Image
 import torch
 
 
+class ColumnSelect(object):
+    def __init__(self, keys: list):
+        self.keys = keys
+
+    def __call__(self, feats: dict):
+        feats = np.array([feats.get(key) for key in self.keys])
+        return feats
+
+
 class AffectNet(Dataset):
     def __init__(
             self,
@@ -140,7 +149,7 @@ class AffectNetDataloader(object):
                 transforms.ToTensor(),
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
-        self.target_transform = transforms.Compose([torch.FloatTensor])
+        self.target_transform = transforms.Compose([ColumnSelect(['arousal', 'valence']), torch.FloatTensor])
         self.filter_expression = list(range(8))
 
     def run(self, mode: str, pred: list = [], prob: list = []):
@@ -152,14 +161,16 @@ class AffectNetDataloader(object):
                 target_transform=self.target_transform,
                 filter_expressions=self.filter_expression
             )
-            trainloader = DataLoader(
+            # debug line
+            print('# Train Images ' + str(len(all_dataset)))
+            train_loader = DataLoader(
                 dataset=all_dataset,
                 batch_size=self.batch_size*2,
                 shuffle=True,
                 num_workers=self.num_workers,
                 pin_memory=True
             )
-            return trainloader
+            return train_loader
 
         elif mode == 'train':
             labeled_dataset = AffectNet(
@@ -182,21 +193,21 @@ class AffectNetDataloader(object):
                 probability=prob,
                 filter_expressions=self.filter_expression
             )
-            labeledloader = DataLoader(
+            labeled_loader = DataLoader(
                 dataset=labeled_dataset,
                 batch_size=self.batch_size*2,
                 shuffle=True,
                 num_workers=self.num_workers,
                 pin_memory=True
             )
-            unlabeledloader = DataLoader(
+            unlabeled_loader = DataLoader(
                 dataset=unlabeled_dataset,
                 batch_size=self.batch_size*2,
                 shuffle=True,
                 num_workers=self.num_workers,
                 pin_memory=True
             )
-            return labeledloader, unlabeledloader
+            return labeled_loader, unlabeled_loader
         elif mode == 'test':
             test_dataset = AffectNet(
                 self.root_dir,
@@ -205,14 +216,16 @@ class AffectNetDataloader(object):
                 target_transform=self.target_transform,
                 filter_expressions=self.filter_expression
             )
-            testloader = DataLoader(
+            # debug line
+            print('# Test Images: ' + str(len(test_dataset)))
+            test_loader = DataLoader(
                 dataset=test_dataset,
                 batch_size=self.batch_size * 2,
                 shuffle=True,
                 num_workers=self.num_workers,
                 pin_memory=True
             )
-            return testloader
+            return test_loader
         elif mode == 'eval_train':
             eval_dataset = AffectNet(
                 self.root_dir,
@@ -221,11 +234,11 @@ class AffectNetDataloader(object):
                 target_transform=self.target_transform,
                 filter_expressions=self.filter_expression
             )
-            evalloader = DataLoader(
+            eval_loader = DataLoader(
                 dataset=eval_dataset,
                 batch_size=self.batch_size * 2,
                 shuffle=False,
                 num_workers=self.num_workers,
                 pin_memory=True
             )
-            return evalloader
+            return eval_loader
