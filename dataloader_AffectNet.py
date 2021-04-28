@@ -63,6 +63,7 @@ class AffectNet(Dataset):
     def _getitem_base(self, idx):
         img_pth = self.data['images'][idx]['file_name']
         img = cv2.imread(self.root + img_pth)
+        img = Image.fromarray(img)
         img = self.transform(img)
         target = self.data['annotations'][idx]
         target = self.target_transform(target)
@@ -71,6 +72,7 @@ class AffectNet(Dataset):
     def _getitem_unlabeled(self, idx):
         img_pth = self.data['images'][idx]['file_name']
         img = cv2.imread(self.root + img_pth)
+        img = Image.fromarray(img)
         img1 = self.transform(img)
         img2 = self.transform(img)
         return img1, img2
@@ -78,6 +80,7 @@ class AffectNet(Dataset):
     def _getitem_labeled(self, idx):
         img_pth = self.data['images'][idx]['file_name']
         img = cv2.imread(self.root + img_pth)
+        img = Image.fromarray(img)
         img1 = self.transform(img)
         img2 = self.transform(img)
         target = self.data['annotations'][idx]
