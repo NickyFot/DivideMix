@@ -274,6 +274,7 @@ class InceptionResNetV2(nn.Module):
         self.conv2d_7b = BasicConv2d(2080, 1536, kernel_size=1, stride=1)
         self.avgpool_1a = nn.AvgPool2d(8, count_include_pad=False)
         self.last_linear = nn.Linear(1536, num_classes)
+        # TODO: add logvar head
 
     def features(self, input):
         x = self.conv2d_1a(input)

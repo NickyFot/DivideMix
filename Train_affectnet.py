@@ -10,6 +10,7 @@ import os
 import argparse
 import numpy as np
 from PreResNet import *
+from InceptionResNetV2 import *
 from sklearn.mixture import GaussianMixture
 
 import dataloader_AffectNet as dataloader
@@ -228,7 +229,7 @@ class SemiLoss(object):
 
 
 def create_model():
-    model = ResNet18(num_classes=2)
+    model = InceptionResNetV2(num_classes=2)
     model = model.cuda()
     return model
 
