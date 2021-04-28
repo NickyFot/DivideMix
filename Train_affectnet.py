@@ -15,7 +15,7 @@ from sklearn.mixture import GaussianMixture
 
 import dataloader_AffectNet as dataloader
 
-parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
+parser = argparse.ArgumentParser(description='PyTorch AffectNet Training')
 parser.add_argument('--batch_size', default=64, type=int, help='train batchsize')
 parser.add_argument('--lr', '--learning_rate', default=0.02, type=float, help='initial learning rate')
 parser.add_argument('--noise_mode', default='sym')
@@ -23,7 +23,7 @@ parser.add_argument('--alpha', default=4, type=float, help='parameter for Beta')
 parser.add_argument('--lambda_u', default=25, type=float, help='weight for unsupervised loss')
 parser.add_argument('--p_threshold', default=0.5, type=float, help='clean probability threshold')
 parser.add_argument('--T', default=0.5, type=float, help='sharpening temperature')
-parser.add_argument('--num_epochs', default=300, type=int)
+parser.add_argument('--num_epochs', default=50, type=int)
 parser.add_argument('--r', default=0.5, type=float, help='noise ratio')
 parser.add_argument('--id', default='')
 parser.add_argument('--seed', default=123)
@@ -238,7 +238,7 @@ if __name__ == '__main__':
     stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
     test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-    warm_up = 30
+    warm_up = 5
 
     print('| Building net')
     net1 = create_model()
@@ -256,7 +256,7 @@ if __name__ == '__main__':
 
     for epoch in range(args.num_epochs + 1):
         lr = args.lr
-        if epoch >= 150:
+        if epoch >= 25:
             lr /= 10
         for param_group in optimizer1.param_groups:
             param_group['lr'] = lr
