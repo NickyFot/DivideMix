@@ -155,6 +155,7 @@ class ResNet(nn.Module):
         if lout > 4:
             out = F.avg_pool2d(out, 4)
             out = out.view(out.size(0), -1)
+            print(out.size())
             out = self.linear(out)
         return out
 
