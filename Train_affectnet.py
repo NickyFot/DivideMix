@@ -14,10 +14,11 @@ from InceptionResNetV2 import *
 from sklearn.mixture import GaussianMixture
 
 import dataloader_AffectNet as dataloader
+import utils
 
 parser = argparse.ArgumentParser(description='PyTorch AffectNet Training')
 parser.add_argument('--batch_size', default=64, type=int, help='train batchsize')
-parser.add_argument('--lr', '--learning_rate', default=0.02, type=float, help='initial learning rate')
+parser.add_argument('--lr', '--learning_rate', default=0.0001, type=float, help='initial learning rate')
 parser.add_argument('--noise_mode', default='sym')
 parser.add_argument('--alpha', default=4, type=float, help='parameter for Beta')
 parser.add_argument('--lambda_u', default=25, type=float, help='weight for unsupervised loss')
@@ -42,6 +43,8 @@ parser.add_argument('--balance', dest='balance', action='store_true', help="bala
 parser.set_defaults(balance=False)
 parser.add_argument('--remote', dest='remote', action='store_true', help="use remote directories or not")
 parser.set_defaults(remote=False)
+parser.add_argument('--multigpu', dest='multigpu', action='store_true', help='use nn.DataParallel')
+parser.set_defaults(multigpu=False)
 
 args = parser.parse_args()
 
@@ -181,13 +184,13 @@ def test(epoch, net1, net2):
     true = torch.vstack(true)
     pred = torch.vstack(pred)
     rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
-    pcc = 0 #TODO: fix pcc
-    print("\n| Test Epoch #%d\t RMSE: %.2f%%\n" % (epoch, rmse))
-    test_log.write('Epoch:%d   RMSE:%.2f\n' % (epoch, rmse))
+    pcc = utils.PCC(true, pred)
+    print("\n| Test Epoch #%d\t Arr RMSE: %.2f%%, Val RMSE:  %.2f%%\n Arr PCC: %.2f%% Val PCC: %.2f%% \n" % (epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
+    test_log.write('Epoch:%d   Arr RMSE: %.2f%%, Val RMSE:  %.2f%%\n Arr PCC: %.2f%% Val PCC: %.2f%% \n' % (epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
     test_log.flush()
 
 
-def eval_train(model, all_loss):
+def eval_train(model, all_loss) -> (list, list):
     model.eval()
     losses = torch.zeros(50000)
     with torch.no_grad():
@@ -230,6 +233,8 @@ class SemiLoss(object):
 
 def create_model():
     model = InceptionResNetV2(num_classes=2)
+    if args.mutigpu:
+        model = nn.DataParallel(model)
     model = model.cuda()
     return model
 
@@ -238,7 +243,7 @@ if __name__ == '__main__':
     stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
     test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-    warm_up = 5
+    warm_up = 3
 
     print('| Building net')
     net1 = create_model()
@@ -282,8 +287,8 @@ if __name__ == '__main__':
             prob1, all_loss[0] = eval_train(net1, all_loss[0])
             prob2, all_loss[1] = eval_train(net2, all_loss[1])
 
-            pred1 = (prob1 > args.p_threshold)
-            pred2 = (prob2 > args.p_threshold)
+            pred1: list = (prob1 > args.p_threshold)
+            pred2: list = (prob2 > args.p_threshold)
 
             print('Train Net1')
             labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred2, prob=prob2)  # co-divide
@@ -292,5 +297,4 @@ if __name__ == '__main__':
             print('\nTrain Net2')
             labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred1, prob=prob1)  # co-divide
             train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader)  # train net2
-
         test(epoch, net1, net2)
