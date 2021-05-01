@@ -233,7 +233,7 @@ class SemiLoss(object):
 
 def create_model():
     model = InceptionResNetV2(num_classes=2)
-    if args.mutigpu:
+    if args.multigpu:
         model = nn.DataParallel(model)
     model = model.cuda()
     return model
