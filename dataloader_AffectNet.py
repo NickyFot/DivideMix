@@ -163,6 +163,7 @@ class AffectNetDataloader(object):
                 img_transform=self.transform_train,
                 annotation_filename='affectnet_annotations_train_all_regression_ext_det.json',
                 target_transform=self.target_transform,
+                mode=None,
                 filter_expressions=self.filter_expression
             )
             # debug line
@@ -217,6 +218,7 @@ class AffectNetDataloader(object):
                 self.root_dir,
                 img_transform=self.transform_train,
                 annotation_filename='affectnet_annotations_val_all_regression_ext_det.json',
+                mode=None,
                 target_transform=self.target_transform,
                 filter_expressions=self.filter_expression
             )
@@ -235,6 +237,7 @@ class AffectNetDataloader(object):
                 self.root_dir,
                 img_transform=self.transform_train,
                 annotation_filename='affectnet_annotations_train_all_regression_ext_det.json',
+                mode=None,
                 target_transform=self.target_transform,
                 filter_expressions=self.filter_expression
             )
