@@ -186,7 +186,7 @@ def test(epoch, net1, net2):
     rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
     pcc = utils.PCC(true, pred)
     print("\n| Test Epoch #%d\t Arr RMSE: %.2f%%, Val RMSE:  %.2f%%\n Arr PCC: %.2f%% Val PCC: %.2f%% \n" % (epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
-    test_log.write('Epoch:%d   Arr RMSE: %.2f%%, Val RMSE:  %.2f%%\n Arr PCC: %.2f%% Val PCC: %.2f%% \n' % (epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
+    test_log.write('Epoch:%d   Arr RMSE: %.2f%%, Val RMSE:  %.2f%%, Arr PCC: %.2f%% Val PCC: %.2f%% \n' % (epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
     test_log.flush()
 
 
@@ -237,6 +237,10 @@ def create_model():
         model = nn.DataParallel(model)
     model = model.cuda()
     return model
+
+
+def save_model(epoch, model, model_num):
+    torch.save(model.state_dict(), './checkpoint/%s_lr%.1f_epoch%s_ensemble%s' % (args.dataset, args.r, str(epoch), str(model_num)) + '_model.pth')
 
 
 if __name__ == '__main__':
@@ -298,3 +302,5 @@ if __name__ == '__main__':
             labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred1, prob=prob1)  # co-divide
             train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader)  # train net2
         test(epoch, net1, net2)
+        save_model(epoch, net1, 0)
+        save_model(epoch, net2, 1)
