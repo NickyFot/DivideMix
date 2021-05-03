@@ -193,7 +193,8 @@ def test(epoch, net1, net2):
 
 def eval_train(model, all_loss) -> (list, list):
     model.eval()
-    losses = torch.zeros(50000)
+    samples_size = len(eval_loader)
+    losses = torch.zeros(samples_size)
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
