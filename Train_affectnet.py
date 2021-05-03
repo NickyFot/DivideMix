@@ -177,8 +177,8 @@ def test(epoch, net1, net2):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs1 = net1(inputs)
             outputs2 = net2(inputs)
-            outputs = outputs1 + outputs2
-            predicted = torch.mean(outputs, dim=1).reshape(-1, 1)
+            predicted = (outputs1 + outputs2)/2
+            # predicted = torch.mean(outputs, dim=1).reshape(-1, 1)
             # print(predicted.size())
             true.append(targets)
             pred.append(predicted)
