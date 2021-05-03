@@ -236,6 +236,7 @@ class SemiLoss(object):
 def create_model():
     model = InceptionResNetV2(num_classes=2)
     if args.multigpu:
+        torch.cuda.set_per_process_memory_fraction(0.4, device=0)
         model = nn.DataParallel(model)
     model = model.cuda()
     return model
