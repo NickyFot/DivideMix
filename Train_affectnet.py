@@ -178,8 +178,8 @@ def test(epoch, net1, net2):
             outputs1 = net1(inputs)
             outputs2 = net2(inputs)
             outputs = outputs1 + outputs2
-            predicted = torch.mean(outputs, dim=1)
-            print(predicted.size())
+            predicted = torch.mean(outputs, dim=1).reshape(-1, 1)
+            # print(predicted.size())
             true.append(targets)
             pred.append(predicted)
     true = torch.vstack(true)
