@@ -193,7 +193,7 @@ def test(epoch, net1, net2):
 
 def eval_train(model, all_loss) -> (list, list):
     model.eval()
-    samples_size = len(eval_loader)
+    samples_size = len(eval_loader.dataset)
     losses = torch.zeros(samples_size)
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
