@@ -249,7 +249,7 @@ if __name__ == '__main__':
     stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
     test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-    warm_up = 3
+    warm_up = 5
 
     print('| Building net')
     net1 = create_model()
