@@ -155,7 +155,7 @@ class AffectNetDataloader(object):
             ])
         self.target_transform = transforms.Compose([ColumnSelect(['arousal', 'valence']), torch.FloatTensor])
         self.filter_expression = list(range(8))
-        # self.filter_expression.append(9)  # train on uncertain
+        self.filter_expression.append(9)  # train on uncertain
 
     def run(self, mode: str, pred: list = [], prob: list = []):
         if mode == 'warmup':
