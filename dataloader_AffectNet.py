@@ -32,7 +32,7 @@ class AffectNet(Dataset):
             **kwargs
     ):
         self.root = root_dir
-        self.annotation_path = os.path.join(*[root_dir, 'Manually_Annotated', annotation_filename])
+        self.annotation_path = os.path.join(*[root_dir, 'Manually_Annotated', 'full_jsons', annotation_filename])
         self.transform = img_transform
         self.target_transform = target_transform
         self.mode = mode
@@ -155,6 +155,7 @@ class AffectNetDataloader(object):
             ])
         self.target_transform = transforms.Compose([ColumnSelect(['arousal', 'valence']), torch.FloatTensor])
         self.filter_expression = list(range(8))
+        self.filter_expression.append(9)  # train on uncertain
 
     def run(self, mode: str, pred: list = [], prob: list = []):
         if mode == 'warmup':
@@ -214,6 +215,8 @@ class AffectNetDataloader(object):
             )
             return labeled_loader, unlabeled_loader
         elif mode == 'test':
+            if 9 in self.filter_expression:
+                self.filter_expression.remove(9)  # test on clean emotions
             test_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
