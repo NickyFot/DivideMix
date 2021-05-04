@@ -142,14 +142,14 @@ class AffectNetDataloader(object):
         self.log = log
 
         self.transform_train = transforms.Compose([
-                transforms.Resize(320),
-                transforms.RandomResizedCrop(299),
+                transforms.Resize(224),
+                transforms.RandomResizedCrop(210),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
         self.transform_val = transforms.Compose([
-                transforms.Resize(320),
+                transforms.Resize(224),
                 transforms.ToTensor(),
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
