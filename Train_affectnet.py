@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
+from torch.cuda.amp import GradScaler
 import random
 import os
 import argparse
@@ -62,6 +63,7 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
     unlabeled_train_iter = iter(unlabeled_trainloader)
     num_iter = (len(labeled_trainloader.dataset) // args.batch_size) + 1
     for batch_idx, (inputs_x, inputs_x2, labels_x, w_x) in enumerate(labeled_trainloader):
+        optimizer.zero_grad()
         try:
             inputs_u, inputs_u2 = unlabeled_train_iter.next()
         except:
@@ -122,25 +124,30 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
 
         mixed_input = l * input_a + (1 - l) * input_b
         mixed_target = l * target_a + (1 - l) * target_b
+        with torch.cuda.amp.autocast():
+            logits = net(mixed_input)
+            logits_x = logits[:batch_size * 2]
+            logits_u = logits[batch_size * 2:]
 
-        logits = net(mixed_input)
-        logits_x = logits[:batch_size * 2]
-        logits_u = logits[batch_size * 2:]
+            Lx, Lu, lamb = criterion(
+                logits_x,
+                mixed_target[:batch_size * 2],
+                logits_u,
+                mixed_target[batch_size * 2:],
+                epoch + batch_idx / num_iter,
+                warm_up
+            )
 
-        Lx, Lu, lamb = criterion(logits_x, mixed_target[:batch_size * 2], logits_u, mixed_target[batch_size * 2:],
-                                 epoch + batch_idx / num_iter, warm_up)
+            # regularization
+            # prior = torch.ones(args.num_class) / args.num_class
+            # prior = prior.cuda()
+            # pred_mean = torch.softmax(logits, dim=1).mean(0)
+            # penalty = torch.sum(prior * torch.log(prior / pred_mean))
 
-        # regularization
-        # prior = torch.ones(args.num_class) / args.num_class
-        # prior = prior.cuda()
-        # pred_mean = torch.softmax(logits, dim=1).mean(0)
-        # penalty = torch.sum(prior * torch.log(prior / pred_mean))
-
-        loss = Lx + lamb * Lu #+ penalty
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            loss = Lx + lamb * Lu #+ penalty
+            # compute gradient and do SGD step
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
 
         sys.stdout.write('\r')
         sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t Labeled loss: %.2f  Unlabeled loss: %.2f'
@@ -155,10 +162,11 @@ def warmup(epoch, net, optimizer, dataloader):
     for batch_idx, (inputs, labels, _) in enumerate(dataloader):
         inputs, labels = inputs.cuda(), labels.cuda()
         optimizer.zero_grad()
-        outputs = net(inputs)
-        loss = MSEloss(outputs, labels)
-        loss.backward()
-        optimizer.step()
+        with torch.cuda.amp.autocast():
+            outputs = net(inputs)
+            loss = MSEloss(outputs, labels)
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
 
         sys.stdout.write('\r')
         sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t MSE-loss: %.4f'
@@ -252,6 +260,7 @@ if __name__ == '__main__':
 
     warm_up = 5
 
+    scaler = GradScaler()
     print('| Building net')
     net1 = create_model()
     net2 = create_model()
@@ -304,6 +313,7 @@ if __name__ == '__main__':
             print('\nTrain Net2')
             labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred1, prob=prob1)  # co-divide
             train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader)  # train net2
+        scaler.update()
         test(epoch, net1, net2)
         save_model(epoch, net1, 0)
         save_model(epoch, net2, 1)

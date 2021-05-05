@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 import torch
 import torch.nn as nn
+from torch.cuda.amp import autocast
 import os
 import sys
 
@@ -300,6 +301,7 @@ class InceptionResNetV2(nn.Module):
         x = self.last_linear(x)
         return x
 
+    @autocast()
     def forward(self, input):
         x = self.features(input)
         x = self.logits(x)
