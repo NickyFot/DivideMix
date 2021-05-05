@@ -148,7 +148,7 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
         scaler.step(optimizer)
-
+        scaler.update()
         sys.stdout.write('\r')
         sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t Labeled loss: %.2f  Unlabeled loss: %.2f'
                          % (args.dataset, args.r, args.noise_mode, epoch, args.num_epochs, batch_idx + 1, num_iter,
@@ -167,7 +167,7 @@ def warmup(epoch, net, optimizer, dataloader):
             loss = MSEloss(outputs, labels)
         scaler.scale(loss).backward()
         scaler.step(optimizer)
-
+        scaler.update()
         sys.stdout.write('\r')
         sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t MSE-loss: %.4f'
                          % (args.dataset, args.r, args.noise_mode, epoch, args.num_epochs, batch_idx + 1, num_iter,
@@ -313,7 +313,6 @@ if __name__ == '__main__':
             print('\nTrain Net2')
             labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred1, prob=prob1)  # co-divide
             train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader)  # train net2
-        scaler.update()
         test(epoch, net1, net2)
         save_model(epoch, net1, 0)
         save_model(epoch, net2, 1)
