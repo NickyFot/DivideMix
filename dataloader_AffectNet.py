@@ -32,7 +32,7 @@ class AffectNet(Dataset):
             **kwargs
     ):
         self.root = root_dir
-        self.annotation_path = os.path.join(*[root_dir, 'Manually_Annotated', 'full_jsons', annotation_filename])
+        self.annotation_path = annotation_filename
         self.transform = img_transform
         self.target_transform = target_transform
         self.mode = mode
@@ -61,7 +61,7 @@ class AffectNet(Dataset):
             return self._getitem_base(idx)
 
     def _getitem_base(self, idx):
-        img_pth = self.data['images'][idx]['file_name']
+        img_pth = os.path.join(*[self.root, 'Manually_Annotated', 'extracted_cropped', self.data['images'][idx]['file_name']])
         img = cv2.imread(img_pth)
         img = Image.fromarray(img).convert('RGB')
         img = self.transform(img)
@@ -70,7 +70,7 @@ class AffectNet(Dataset):
         return img, target, idx
 
     def _getitem_unlabeled(self, idx):
-        img_pth = self.data['images'][idx]['file_name']
+        img_pth = os.path.join(*[self.root, 'Manually_Annotated', 'extracted_cropped', self.data['images'][idx]['file_name']])
         img = cv2.imread(img_pth)
         img = Image.fromarray(img).convert('RGB')
         img1 = self.transform(img)
@@ -78,7 +78,7 @@ class AffectNet(Dataset):
         return img1, img2
 
     def _getitem_labeled(self, idx):
-        img_pth = self.data['images'][idx]['file_name']
+        img_pth = os.path.join(*[self.root, 'Manually_Annotated', 'extracted_cropped', self.data['images'][idx]['file_name']])
         img = cv2.imread(img_pth)
         img = Image.fromarray(img).convert('RGB')
         img1 = self.transform(img)
@@ -162,7 +162,7 @@ class AffectNetDataloader(object):
             all_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_regression_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all.json',
                 target_transform=self.target_transform,
                 mode=None,
                 filter_expressions=self.filter_expression
@@ -182,7 +182,7 @@ class AffectNetDataloader(object):
             labeled_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_regression_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all.json',
                 target_transform=self.target_transform,
                 mode='labeled',
                 pred=pred,
@@ -192,7 +192,7 @@ class AffectNetDataloader(object):
             unlabeled_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_regression_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all.json',
                 target_transform=self.target_transform,
                 mode='unlabeled',
                 pred=pred,
@@ -220,7 +220,7 @@ class AffectNetDataloader(object):
             test_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_val_all_regression_ext_det.json',
+                annotation_filename='affectnet_annotations_val_all.json',
                 mode=None,
                 target_transform=self.target_transform,
                 filter_expressions=self.filter_expression
@@ -239,7 +239,7 @@ class AffectNetDataloader(object):
             eval_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_regression_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all.json',
                 mode=None,
                 target_transform=self.target_transform,
                 filter_expressions=self.filter_expression

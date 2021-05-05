@@ -10,3 +10,4 @@ checkpoint/
 __pycache__/
 
 .idea/
+affectnet_annotations_*.json
