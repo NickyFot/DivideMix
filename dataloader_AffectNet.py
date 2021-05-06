@@ -157,12 +157,14 @@ class AffectNetDataloader(object):
         self.filter_expression = list(range(8))
         self.filter_expression.append(9)  # train on uncertain
 
+        self.filter_expression_test = list(range(8))
+
     def run(self, mode: str, pred: list = [], prob: list = []):
         if mode == 'warmup':
             all_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det.json',
                 target_transform=self.target_transform,
                 mode=None,
                 filter_expressions=self.filter_expression
@@ -182,7 +184,7 @@ class AffectNetDataloader(object):
             labeled_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det.json',
                 target_transform=self.target_transform,
                 mode='labeled',
                 pred=pred,
@@ -192,7 +194,7 @@ class AffectNetDataloader(object):
             unlabeled_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det.json',
                 target_transform=self.target_transform,
                 mode='unlabeled',
                 pred=pred,
@@ -215,15 +217,13 @@ class AffectNetDataloader(object):
             )
             return labeled_loader, unlabeled_loader
         elif mode == 'test':
-            if 9 in self.filter_expression:
-                self.filter_expression.remove(9)  # test on clean emotions
             test_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_val_all.json',
+                annotation_filename='affectnet_annotations_val_all_ext_det.json',
                 mode=None,
                 target_transform=self.target_transform,
-                filter_expressions=self.filter_expression
+                filter_expressions=self.filter_expression_test
             )
             # debug line
             print('# Test Images: ' + str(len(test_dataset)))
@@ -239,7 +239,7 @@ class AffectNetDataloader(object):
             eval_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det.json',
                 mode=None,
                 target_transform=self.target_transform,
                 filter_expressions=self.filter_expression
