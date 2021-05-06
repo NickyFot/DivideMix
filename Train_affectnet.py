@@ -101,13 +101,12 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             outputs_x2 = net(inputs_x2)
 
             # region classification sharpening
-            # px = (torch.softmax(outputs_x, dim=1) + torch.softmax(outputs_x2, dim=1)) / 2
-            # px = w_x * labels_x + (1 - w_x) * px
             # ptx = px ** (1 / args.T)  # temparature sharpening
             #
             # targets_x = ptx / ptx.sum(dim=1, keepdim=True)  # normalize
             # endregion
             targets_x = (outputs_x + outputs_x2)/2
+            targets_x = w_x * labels_x + (1-w_x) * targets_x
             targets_x = targets_x.detach()
 
         # mixmatch
