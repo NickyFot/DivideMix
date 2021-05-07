@@ -147,7 +147,7 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             pred_mean = logits.mean(0)
             penalty = torch.sum(prior * torch.log(prior / pred_mean))
 
-            loss = Lx + lamb * Lu + penalty
+            loss = Lx + lamb * Lu #+ penalty
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
         scaler.step(optimizer)
