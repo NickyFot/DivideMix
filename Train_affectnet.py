@@ -12,6 +12,7 @@ import argparse
 import numpy as np
 from PreResNet import *
 from InceptionResNetV2 import *
+from ResNet18 import ResNet18
 from sklearn.mixture import GaussianMixture
 
 import dataloader_AffectNet as dataloader
@@ -73,8 +74,7 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
 
         # Transform label to one-hot
         # labels_x = torch.zeros(batch_size, args.num_class).scatter_(1, labels_x.view(-1, 1), 1)
-        # w_x = w_x.view(-1, 1).type(torch.FloatTensor)
-
+        w_x = w_x.view(-1, 1).type(torch.FloatTensor)
         inputs_x, inputs_x2, labels_x, w_x = inputs_x.cuda(), inputs_x2.cuda(), labels_x.cuda(), w_x.cuda()
         inputs_u, inputs_u2 = inputs_u.cuda(), inputs_u2.cuda()
 
@@ -149,9 +149,9 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
         scaler.step(optimizer)
         scaler.update()
         sys.stdout.write('\r')
-        sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t Labeled loss: %.2f  Unlabeled loss: %.2f'
-                         % (args.dataset, args.r, args.noise_mode, epoch, args.num_epochs, batch_idx + 1, num_iter,
-                            Lx.item(), Lu.item()))
+        sys.stdout.write('{}:{}-{} | Epoch [{}/{}] Iter[{}/{}]\t Labeled loss: {}  Unlabeled loss: {}'.format(
+            args.dataset, args.r, args.noise_mode, epoch, args.num_epochs, batch_idx + 1, num_iter, Lx.item(), Lu.item())
+        )
         sys.stdout.flush()
 
 
@@ -193,8 +193,8 @@ def test(epoch, net1, net2):
     pred = torch.vstack(pred)
     rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
     pcc = utils.PCC(true, pred)
-    print("\n| Test Epoch #%d\t Arr RMSE: %.2f%%, Val RMSE:  %.2f%%\n Arr PCC: %.2f%% Val PCC: %.2f%% \n" % (epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
-    test_log.write('Epoch:%d   Arr RMSE: %.2f%%, Val RMSE:  %.2f%%, Arr PCC: %.2f%% Val PCC: %.2f%% \n' % (epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
+    print("\n| Test Epoch #{}\t Arr RMSE: {}, Val RMSE:  {}\n Arr PCC: {} Val PCC: {} \n".format(epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
+    test_log.write('Epoch:{}   Arr RMSE: {}, Val RMSE:  {}, Arr PCC: {} Val PCC: {} \n'.format(epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
     test_log.flush()
 
 
@@ -241,7 +241,7 @@ class SemiLoss(object):
 
 
 def create_model():
-    model = InceptionResNetV2(num_classes=2)
+    model = ResNet18(True, False, variance=False, pretrained=True)
     if args.multigpu:
         # torch.cuda.set_per_process_memory_fraction(0.4, device=0)
         model = nn.DataParallel(model)
@@ -315,3 +315,5 @@ if __name__ == '__main__':
         test(epoch, net1, net2)
         save_model(epoch, net1, 0)
         save_model(epoch, net2, 1)
+
+# python Train_affectnet.py --batch_size 32 --multigpu --data_path /import/nobackup_mmv_ioannisp/shared/datasets/AffectNet/ --lambda_u 1 --alpha 1
