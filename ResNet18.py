@@ -39,4 +39,4 @@ class ResNet18(nn.Module):
         if self.do_var:
             var = self.linear_var(out)
             preds['var'] = var
-        return preds
+        return preds['regr']  # TODO: handle dict for variance
