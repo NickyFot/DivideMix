@@ -4,8 +4,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from torch import nn
 import torch.backends.cudnn as cudnn
 from torch.cuda.amp import GradScaler
+from torch.distributions.normal import Normal
 import random
 import os
 import argparse
@@ -140,10 +142,12 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             # regularization
             # prior = torch.ones(args.num_class) / args.num_class
             # prior = prior.cuda()
-            # pred_mean = torch.softmax(logits, dim=1).mean(0)
+            # pred_mean = logits.mean(0)
             # penalty = torch.sum(prior * torch.log(prior / pred_mean))
+            pred_mean = logits.mean(0)
+            penalty = torch.sum(prior * torch.log(prior / pred_mean))
 
-            loss = Lx + lamb * Lu #+ penalty
+            loss = Lx + lamb * Lu + penalty
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -185,8 +189,6 @@ def test(epoch, net1, net2):
             outputs1 = net1(inputs)
             outputs2 = net2(inputs)
             predicted = (outputs1 + outputs2)/2
-            # predicted = torch.mean(outputs, dim=1).reshape(-1, 1)
-            # print(predicted.size())
             true.append(targets)
             pred.append(predicted)
     true = torch.vstack(true)
@@ -253,6 +255,15 @@ def save_model(epoch, model, model_num):
     torch.save(model.state_dict(), './checkpoint/%s_lr%.1f_epoch%s_ensemble%s' % (args.dataset, args.r, str(epoch), str(model_num)) + '_model.pth')
 
 
+def calculate_prior():
+    label_dist = Normal(torch.tensor([0.1123, 0.1980]), torch.tensor([0.2989, 0.5137]))  # mean and std of arousal and valence in affectnet
+    p = torch.arange(-1, 1, 0.01)
+    p = torch.vstack([p, p]).permute(1, 0)
+    p = label_dist.log_prob(p)
+    p = torch.exp(p)
+    return p.cuda()
+
+
 if __name__ == '__main__':
     stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
     test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
@@ -265,6 +276,7 @@ if __name__ == '__main__':
     net2 = create_model()
     cudnn.benchmark = True
 
+    prior = calculate_prior()
     criterion = SemiLoss()
     optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
