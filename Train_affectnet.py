@@ -145,9 +145,9 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             # pred_mean = logits.mean(0)
             # penalty = torch.sum(prior * torch.log(prior / pred_mean))
             pred_mean = logits.mean(0)
-            penalty = torch.sum(prior * torch.log(prior / pred_mean))
+            penalty = torch.trapz((prior * torch.log(prior / pred_mean)).permute(1, 0), dx)
 
-            loss = Lx + lamb * Lu #+ penalty
+            loss = Lx + lamb * Lu + penalty.mean()
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -257,11 +257,11 @@ def save_model(epoch, model, model_num):
 
 def calculate_prior():
     label_dist = Normal(torch.tensor([0.1123, 0.1980]), torch.tensor([0.2989, 0.5137]))  # mean and std of arousal and valence in affectnet
-    p = torch.arange(-1, 1, 0.01)
-    p = torch.vstack([p, p]).permute(1, 0)
-    p = label_dist.log_prob(p)
+    dx = torch.arange(-1, 1, 0.01)
+    dx = torch.vstack([dx, dx]).permute(1, 0)
+    p = label_dist.log_prob(dx)
     p = torch.exp(p)
-    return p.cuda()
+    return p.cuda(), dx.permute(1, 0).cuda()
 
 
 if __name__ == '__main__':
@@ -276,7 +276,7 @@ if __name__ == '__main__':
     net2 = create_model()
     cudnn.benchmark = True
 
-    prior = calculate_prior()
+    prior, dx = calculate_prior()
     criterion = SemiLoss()
     optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
