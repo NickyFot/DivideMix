@@ -142,7 +142,7 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             # regularization
             # pred_mean = logits.mean(0)
             logits = logits.double().cpu()
-            label_dist = Normal(logits.mean(dim=0), logits.std(dim=0))
+            label_dist = Normal(logits.mean(dim=0), logits.std(dim=0)+1e-4)
             label_prob = label_dist.log_prob(logits)
             label_prob = label_prob.cuda()
             pred_mean = torch.exp(label_prob).mean(dim=0)
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
     test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-    warm_up = 5
+    warm_up = 10
 
     scaler = GradScaler()
     print('| Building net')
