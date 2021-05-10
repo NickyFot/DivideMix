@@ -148,14 +148,17 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             pred_mean = torch.exp(label_prob).mean(dim=0)
             penalty = torch.trapz((prior * torch.log(prior / pred_mean)).permute(1, 0), dx)
 
-            loss = Lx + lamb * Lu + penalty.mean()
+            loss = Lx + lamb * Lu + penalty
+            loss = loss.mean()
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
         sys.stdout.write('\r')
-        sys.stdout.write('{}:{}-{} | Epoch [{}/{}] Iter[{}/{}]\t Labeled loss: {}  Unlabeled loss: {}'.format(
-            args.dataset, args.r, args.noise_mode, epoch, args.num_epochs, batch_idx + 1, num_iter, Lx.item(), Lu.item())
+        sys.stdout.write(
+            '{}:{}-{} | Epoch [{}/{}] Iter[{}/{}]\t Labeled loss: {}  Unlabeled loss: {} Penalty: {}'.format(
+                args.dataset, args.r, args.noise_mode, epoch, args.num_epochs, batch_idx + 1, num_iter, Lx.mean().item(), Lu.mean().item(), penalty.mean()
+            )
         )
         sys.stdout.flush()
 
@@ -237,8 +240,8 @@ def linear_rampup(current, warm_up, rampup_length=16):
 
 class SemiLoss(object):
     def __call__(self, outputs_x, targets_x, outputs_u, targets_u, epoch, warm_up):
-        Lx = torch.sqrt(torch.mean((outputs_u - targets_u) ** 2))
-        Lu = torch.sqrt(torch.mean((outputs_x - targets_x) ** 2))
+        Lx = torch.mean((outputs_u - targets_u) ** 2, dim=0)
+        Lu = torch.mean((outputs_x - targets_x) ** 2, dim=0)
 
         return Lx, Lu, linear_rampup(epoch, warm_up)
 
