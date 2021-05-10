@@ -141,9 +141,11 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
 
             # regularization
             # pred_mean = logits.mean(0)
-            label_dist = Normal(logits.cpu().mean(dim=0), logits.cpu().std(dim=0))
-            label_prob = label_dist.log_prob(logits.cpu())
-            pred_mean = torch.exp(label_prob).cuda().mean(dim=0)
+            logits = logits.double().cpu()
+            label_dist = Normal(logits.mean(dim=0), logits.std(dim=0))
+            label_prob = label_dist.log_prob(logits)
+            label_prob = label_prob.cuda()
+            pred_mean = torch.exp(label_prob).mean(dim=0)
             penalty = torch.trapz((prior * torch.log(prior / pred_mean)).permute(1, 0), dx)
 
             loss = Lx + lamb * Lu + penalty.mean()
