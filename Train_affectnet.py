@@ -139,15 +139,14 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
                 warm_up
             )
 
-            # regularization
-            # pred_mean = logits.mean(0)
+            # regularization - KL of true and predicted label distribution
             logits = logits.double().cpu()
             label_dist = Normal(logits.mean(dim=0), logits.std(dim=0)+1e-4)
-            label_prob = label_dist.log_prob(logits)
+            label_prob = label_dist.log_prob(dx)
             label_prob = label_prob.cuda()
-            pred_mean = torch.exp(label_prob).mean(dim=0)
+            pred_mean = torch.exp(label_prob)
             penalty = torch.trapz((prior * torch.log(prior / pred_mean)).permute(1, 0), dx)
-            print(Lx.size(), Lu.size(), penalty.size())  # debug line
+            # print(Lx.size(), Lu.size(), penalty.size())  # debug line
             loss = Lx + lamb * Lu + penalty
             loss = loss.mean()
             # compute gradient and do SGD step
