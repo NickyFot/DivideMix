@@ -140,14 +140,14 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             )
 
             # regularization - KL of true and predicted label distribution
-            logits = logits.double().cpu()
+            logits = logits.float().cpu()
             label_dist = Normal(logits.mean(dim=0), logits.std(dim=0)+1e-4)
             label_prob = label_dist.log_prob(dx)
             prior = torch.ones((dx.size(0), 2))/dx.size(0)
-            penalty = F.kl_div(label_prob.cuda(), prior, reduction='none', log_target=False).sum(dim=0)
-            # print(Lx.size(), Lu.size(), penalty.size())  # debug line
+            penalty = F.kl_div(label_prob.cuda(), prior.cuda(), reduction='batchmean', log_target=False)
+            print(Lx.size(), Lu.size(), penalty)  # debug line
             loss = Lx + lamb * Lu + penalty
-            loss = loss.mean()
+            #loss = loss.mean()
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -238,8 +238,8 @@ def linear_rampup(current, warm_up, rampup_length=16):
 
 class SemiLoss(object):
     def __call__(self, outputs_x, targets_x, outputs_u, targets_u, epoch, warm_up):
-        Lx = torch.mean((outputs_u - targets_u) ** 2, dim=0)
-        Lu = torch.mean((outputs_x - targets_x) ** 2, dim=0)
+        Lu = F.mse_loss(outputs_u, targets_u)
+        Lx = F.mse_loss(outputs_x, targets_x)
 
         return Lx, Lu, linear_rampup(epoch, warm_up)
 
