@@ -147,7 +147,7 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             label_prob = label_prob.cuda()
             pred_mean = torch.exp(label_prob).mean(dim=0)
             penalty = torch.trapz((prior * torch.log(prior / pred_mean)).permute(1, 0), dx)
-
+            print(Lx.size(), Lu.size(), penalty.size())  # debug line
             loss = Lx + lamb * Lu + penalty
             loss = loss.mean()
             # compute gradient and do SGD step
