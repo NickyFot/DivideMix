@@ -142,8 +142,8 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             # regularization - KL of true and predicted label distribution
             logits = logits.double().cpu()
             label_dist = Normal(logits.mean(dim=0), logits.std(dim=0)+1e-4)
-            label_prob = label_dist.log_prob(torch.vstack([dx, dx]))
-            penalty = F.kl_div(label_prob.cuda(), prior, reduction='none').sum(dim=0)
+            label_prob = label_dist.log_prob(dx)
+            penalty = F.kl_div(label_prob.cuda(), prior, reduction='none', log_target=True).sum(dim=0)
             print(Lx.size(), Lu.size(), penalty.size())  # debug line
             loss = Lx + lamb * Lu + penalty
             loss = loss.mean()
@@ -262,7 +262,7 @@ def calculate_prior():
     dx = torch.vstack([dx, dx]).permute(1, 0)
     p = label_dist.log_prob(dx)
     p = torch.exp(p)
-    return p.cuda(), dx.permute(1, 0).cuda()
+    return p.cuda(), dx.cuda()
 
 
 if __name__ == '__main__':
