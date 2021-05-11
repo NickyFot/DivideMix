@@ -12,8 +12,8 @@ import random
 import os
 import argparse
 import numpy as np
-from PreResNet import *
-from InceptionResNetV2 import *
+# from PreResNet import *
+# from InceptionResNetV2 import *
 from ResNet18 import ResNet18
 from sklearn.mixture import GaussianMixture
 
@@ -143,10 +143,9 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             logits = logits.double().cpu()
             label_dist = Normal(logits.mean(dim=0), logits.std(dim=0)+1e-4)
             label_prob = label_dist.log_prob(dx)
-            print(dx.size(1))
-            prior = torch.ones((2, dx.size(1)))/dx.size(1)
+            prior = torch.ones((2, dx.size(0)))/dx.size(0)
             penalty = F.kl_div(label_prob.cuda(), prior, reduction='none', log_target=False).sum(dim=0)
-            print(Lx.size(), Lu.size(), penalty.size())  # debug line
+            # print(Lx.size(), Lu.size(), penalty.size())  # debug line
             loss = Lx + lamb * Lu + penalty
             loss = loss.mean()
             # compute gradient and do SGD step
