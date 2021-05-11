@@ -143,7 +143,7 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             logits = logits.double().cpu()
             label_dist = Normal(logits.mean(dim=0), logits.std(dim=0)+1e-4)
             label_prob = label_dist.log_prob(dx)
-            prior = torch.ones((2, dx.size(0)))/dx.size(0)
+            prior = torch.ones((dx.size(0), 2))/dx.size(0)
             penalty = F.kl_div(label_prob.cuda(), prior, reduction='none', log_target=False).sum(dim=0)
             # print(Lx.size(), Lu.size(), penalty.size())  # debug line
             loss = Lx + lamb * Lu + penalty
