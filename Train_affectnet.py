@@ -262,7 +262,7 @@ def calculate_prior():
     dx = torch.vstack([dx, dx]).permute(1, 0)
     p = label_dist.log_prob(dx)
     p = torch.exp(p)
-    return p.cuda(), dx.cuda()
+    return p.cuda(), dx
 
 
 if __name__ == '__main__':
