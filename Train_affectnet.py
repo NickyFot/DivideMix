@@ -144,8 +144,8 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             label_dist = Normal(logits.mean(dim=0), logits.std(dim=0)+1e-4)
             label_prob = label_dist.log_prob(dx)
             prior = torch.ones((dx.size(0), 2))/dx.size(0)
-            penalty = F.kl_div(label_prob.cuda(), prior.cuda(), reduction='batchmean', log_target=False)
-            print(Lx.size(), Lu.size(), penalty)  # debug line
+            penalty = F.kl_div(label_prob.cuda(), prior.cuda(), reduction='sum', log_target=False)/2
+            # print(Lx.size(), Lu.size(), penalty)  # debug line
             loss = Lx + lamb * Lu + penalty
             #loss = loss.mean()
             # compute gradient and do SGD step
@@ -269,7 +269,7 @@ if __name__ == '__main__':
     stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
     test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-    warm_up = 0
+    warm_up = 30
 
     scaler = GradScaler()
     print('| Building net')
