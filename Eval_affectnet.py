@@ -74,8 +74,11 @@ def test(net):
 
 def create_model(model_pth: str):
     model = ResNet18(True, False, variance=False, pretrained=False)
-    state_dct = torch.load(model_pth)
-    model.load_state_dict(state_dct)
+    state_dct = torch.load(model_pth, map_location=torch.device('cpu'))
+    new_state = dict()
+    for key in state_dct:
+        new_state[key.replace('module.', '')] = state_dct[key]
+    model.load_state_dict(new_state)
     if args.multigpu:
         # torch.cuda.set_per_process_memory_fraction(0.4, device=0)
         model = nn.DataParallel(model)
