@@ -258,7 +258,8 @@ if __name__ == '__main__':
         loader = dataloader.AffectNetDataloader(
             batch_size=args.batch_size,
             num_workers=5,
-            root_dir=args.data_path
+            root_dir=args.data_path,
+            log=None
         )
         eval_loader = loader.run(mode='eval_train')
         test_loader = loader.run(mode='test')
