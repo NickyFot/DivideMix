@@ -1,7 +1,7 @@
 from __future__ import print_function
 import sys
 import torch
-import torch.nn as nn
+from datetime import datetime
 import torch.optim as optim
 import torch.nn.functional as F
 from torch import nn
@@ -12,8 +12,6 @@ import random
 import os
 import argparse
 import numpy as np
-# from PreResNet import *
-# from InceptionResNetV2 import *
 from ResNet18 import ResNet18
 from sklearn.mixture import GaussianMixture
 
@@ -254,7 +252,7 @@ def create_model():
 
 
 def save_model(epoch, model, model_num):
-    torch.save(model.state_dict(), './checkpoint/%s_lr%.1f_epoch%s_ensemble%s' % (args.dataset, args.r, str(epoch), str(model_num)) + '_model.pth')
+    torch.save(model.state_dict(), log_folder+'%s_lr%.1f_epoch%s_ensemble%s' % (args.dataset, args.r, str(epoch), str(model_num)) + '_model.pth')
 
 
 def calculate_prior():
@@ -266,8 +264,11 @@ def calculate_prior():
 
 
 if __name__ == '__main__':
-    stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
-    test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
+    start_time = datetime.now().strftime('%Y%m%d_%R%M')
+    log_folder = './checkpoint/' + start_time
+    os.mkdir(log_folder)
+    stats_log = open(log_folder+'%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
+    test_log = open(log_folder+'%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
     warm_up = 30
 
