@@ -134,12 +134,13 @@ class AffectNet(Dataset):
 
 
 class AffectNetDataloader(object):
-    def __init__(self, batch_size, num_workers, root_dir, log):
+    def __init__(self, batch_size, num_workers, root_dir, log, **kwargs):
 
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.root_dir = root_dir
         self.log = log
+        self.kwargs = kwargs
 
         self.transform_train = transforms.Compose([
                 transforms.Resize(98),
@@ -167,7 +168,8 @@ class AffectNetDataloader(object):
                 annotation_filename='affectnet_annotations_train_all_ext_det.json',
                 target_transform=self.target_transform,
                 mode=None,
-                filter_expressions=self.filter_expression
+                filter_expressions=self.filter_expression,
+                **self.kwargs
             )
             # debug line
             print('# Train Images ' + str(len(all_dataset)))
@@ -189,7 +191,8 @@ class AffectNetDataloader(object):
                 mode='labeled',
                 pred=pred,
                 probability=prob,
-                filter_expressions=self.filter_expression
+                filter_expressions=self.filter_expression,
+                **self.kwargs
             )
             unlabeled_dataset = AffectNet(
                 self.root_dir,
@@ -199,7 +202,8 @@ class AffectNetDataloader(object):
                 mode='unlabeled',
                 pred=pred,
                 probability=prob,
-                filter_expressions=self.filter_expression
+                filter_expressions=self.filter_expression,
+                **self.kwargs
             )
             labeled_loader = DataLoader(
                 dataset=labeled_dataset,
@@ -223,7 +227,8 @@ class AffectNetDataloader(object):
                 annotation_filename='affectnet_annotations_val_all_ext_det.json',
                 mode=None,
                 target_transform=self.target_transform,
-                filter_expressions=self.filter_expression_test
+                filter_expressions=self.filter_expression_test,
+                **self.kwargs
             )
             # debug line
             print('# Test Images: ' + str(len(test_dataset)))
@@ -242,7 +247,8 @@ class AffectNetDataloader(object):
                 annotation_filename='affectnet_annotations_train_all_ext_det.json',
                 mode=None,
                 target_transform=self.target_transform,
-                filter_expressions=self.filter_expression
+                filter_expressions=self.filter_expression,
+                **self.kwargs
             )
             eval_loader = DataLoader(
                 dataset=eval_dataset,
