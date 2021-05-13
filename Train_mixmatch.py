@@ -230,8 +230,8 @@ def calculate_prior():
 
 
 if __name__ == '__main__':
-    start_time = datetime.now().strftime('%Y%m%d_%R%M')
-    log_folder = './checkpoint/' + start_time
+    start_time = datetime.now().strftime('%Y%m%d_%H%M')
+    log_folder = './checkpoint/' + start_time + '/'
     os.mkdir(log_folder)
     test_log = open(log_folder + '%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
