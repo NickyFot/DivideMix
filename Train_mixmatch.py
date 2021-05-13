@@ -239,12 +239,12 @@ if __name__ == '__main__':
 
     scaler = GradScaler()
     print('| Building net')
-    net1 = create_model()
+    net = create_model()
     cudnn.benchmark = True
 
     prior, dx = calculate_prior()
     criterion = SemiLoss()
-    optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.Adam(net.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=5e-4)
 
     MSE = nn.MSELoss(reduction='none')
     MSEloss = nn.MSELoss()
@@ -255,7 +255,7 @@ if __name__ == '__main__':
         lr = args.lr
         if epoch >= 100:
             lr /= 10
-        for param_group in optimizer1.param_groups:
+        for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         loader = dataloader.AffectNetDataloader(
             batch_size=args.batch_size,
@@ -269,16 +269,16 @@ if __name__ == '__main__':
         if epoch < warm_up:
             warmup_trainloader = loader.run('warmup')
             print('Warmup Net1')
-            warmup(epoch, net1, optimizer1, warmup_trainloader)
+            warmup(epoch, net, optimizer, warmup_trainloader)
         else:
-            prob1, all_loss[0] = eval_train(net1, all_loss[0])
+            prob, all_loss[0] = eval_train(net, all_loss[0])
 
-            pred1: list = (prob1 > args.p_threshold)
+            pred: list = (prob > args.p_threshold)
 
             print('Train Net')
-            labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred1, prob=prob1)
-            train(epoch, net1, optimizer1, labeled_trainloader, unlabeled_trainloader)
-        test(epoch, net1)
-        save_model(epoch, net1, 0)
+            labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred, prob=prob)
+            train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader)
+        test(epoch, net)
+        save_model(epoch, net, 0)
 
 # python Train_affectnet.py --batch_size 32 --multigpu --data_path /import/nobackup_mmv_ioannisp/shared/datasets/AffectNet/ --lambda_u 1 --alpha 1 --r 0.9

@@ -280,8 +280,8 @@ if __name__ == '__main__':
 
     prior, dx = calculate_prior()
     criterion = SemiLoss()
-    optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+    optimizer1 = optim.Adam(net1.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=5e-4)
+    optimizer2 = optim.Adam(net2.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=5e-4)
 
     MSE = nn.MSELoss(reduction='none')
     MSEloss = nn.MSELoss()
