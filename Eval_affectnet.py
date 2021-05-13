@@ -34,6 +34,9 @@ parser.set_defaults(multigpu=False)
 parser.add_argument('--model_path', type=str)
 parser.add_argument('--partition', type=str, default=None)
 
+parser.add_argument('--seed', default=123)
+parser.add_argument('--gpuid', default=0, type=int)
+
 args = parser.parse_args()
 
 torch.cuda.set_device(args.gpuid)
