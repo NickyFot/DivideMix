@@ -61,7 +61,7 @@ def test(net):
     true = torch.vstack(true)
     pred = torch.vstack(pred)
     if args.savedata:
-        np.savez('checkpoint/data.npz', pred, true)
+        np.savez('checkpoint/data.npz', pred.cpu(), true.cpu())
     rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
     pcc = utils.PCC(true, pred)
     ccc = utils.CCC(true, pred)
