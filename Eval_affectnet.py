@@ -31,6 +31,9 @@ parser.set_defaults(regression=False)
 parser.set_defaults(var=False)
 parser.add_argument('--multigpu', dest='multigpu', action='store_true', help='use nn.DataParallel')
 parser.set_defaults(multigpu=False)
+parser.add_argument('--savedata', dest='savedata', action='store_true', help='use nn.DataParallel')
+parser.set_defaults(savedata=False)
+
 parser.add_argument('--model_path', type=str)
 parser.add_argument('--partition', type=str, default=None)
 
@@ -57,6 +60,8 @@ def test(net):
             pred.append(outputs1)
     true = torch.vstack(true)
     pred = torch.vstack(pred)
+    if args.savedata:
+        np.savez('checkpoint/data.npz', pred, true)
     rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
     pcc = utils.PCC(true, pred)
     ccc = utils.CCC(true, pred)
