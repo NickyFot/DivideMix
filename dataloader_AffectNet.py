@@ -243,12 +243,13 @@ class AffectNetDataloader(object):
             )
             return test_loader
         elif mode == 'eval_train':
+            target_transform = transforms.Compose([ColumnSelect(['arousal', 'valence', 'expression']), torch.FloatTensor])
             eval_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
                 annotation_filename='affectnet_annotations_train_all_ext_det.json',
                 mode=None,
-                target_transform=self.target_transform,
+                target_transform=target_transform,
                 filter_expressions=self.filter_expression,
                 **self.kwargs
             )

@@ -170,13 +170,22 @@ def eval_train(model, all_loss) -> (list, list):
     model.eval()
     samples_size = len(eval_loader.dataset)
     losses = torch.zeros(samples_size)
+    pred, true, expression = list(), list(), list()
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
-            inputs, targets = inputs.cuda(), targets.cuda()
+            exp = targets[:, 2]
+            inputs, targets = inputs.cuda(), targets[:, :2].cuda()
             outputs = model(inputs)
+            pred.append(outputs)
+            true.append(targets)
+            expression.append(exp)
             loss = MSE(outputs, targets).mean(dim=1)
             for b in range(inputs.size(0)):
                 losses[index[b]] = loss[b]
+    pred = torch.vstack(pred)
+    true = torch.vstack(true)
+    expression = torch.vstack(expression)
+    np.savez('checkpoint/data.npz', pred.cpu(), true.cpu(), expression)
     losses = (losses - losses.min()) / (losses.max() - losses.min())
     all_loss.append(losses)
 
