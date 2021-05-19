@@ -28,6 +28,7 @@ parser.add_argument('--lambda_u', default=25, type=float, help='weight for unsup
 parser.add_argument('--p_threshold', default=0.5, type=float, help='clean probability threshold')
 parser.add_argument('--T', default=0.5, type=float, help='sharpening temperature')
 parser.add_argument('--num_epochs', default=50, type=int)
+parser.add_argument('--warmup', default=30, type=int)
 parser.add_argument('--r', default=0.5, type=float, help='noise ratio')
 parser.add_argument('--id', default='')
 parser.add_argument('--seed', default=123)
@@ -245,7 +246,7 @@ if __name__ == '__main__':
     os.mkdir(log_folder)
     test_log = open(log_folder + '%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-    warm_up = 30
+    warm_up = args.warmup
 
     scaler = GradScaler()
     print('| Building net')
