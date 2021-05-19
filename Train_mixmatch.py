@@ -35,19 +35,14 @@ parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=2, type=int)
 parser.add_argument('--data_path', default='', type=str, help='path to dataset')
 parser.add_argument('--dataset', default='affectnet', type=str)
-parser.add_argument('--regression', dest='regression', action='store_true',
-                    help="train on regression task, using the dimensional A/V model")
-parser.set_defaults(regression=False)
 parser.add_argument('--cls', dest='cls', action='store_true', help="train on classification task")
 parser.set_defaults(cls=False)
 parser.add_argument('--var', dest='var', action='store_true', help="train on kldiv task")
 parser.set_defaults(var=False)
-parser.add_argument('--balance', dest='balance', action='store_true', help="balance samples in batch loading")
-parser.set_defaults(balance=False)
-parser.add_argument('--remote', dest='remote', action='store_true', help="use remote directories or not")
-parser.set_defaults(remote=False)
 parser.add_argument('--multigpu', dest='multigpu', action='store_true', help='use nn.DataParallel')
 parser.set_defaults(multigpu=False)
+parser.add_argument('--load_model', default=None, type=str)
+
 
 args = parser.parse_args()
 
@@ -219,6 +214,12 @@ class SemiLoss(object):
 
 def create_model():
     model = ResNet18(True, False, variance=False, pretrained=True)
+    if args.load_model:
+        state_dct = torch.load(args.load_model, map_location=torch.device('cpu'))
+        new_state = dict()
+        for key in state_dct:
+            new_state[key.replace('module.', '')] = state_dct[key]
+        model.load_state_dict(new_state)
     if args.multigpu:
         # torch.cuda.set_per_process_memory_fraction(0.4, device=0)
         model = nn.DataParallel(model)
