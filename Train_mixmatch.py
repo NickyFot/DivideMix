@@ -10,6 +10,7 @@ from torch import nn
 import torch.backends.cudnn as cudnn
 from torch.cuda.amp import GradScaler
 from torch.distributions.normal import Normal
+from torch.distributions.uniform import Uniform
 import random
 import argparse
 import numpy as np
@@ -110,7 +111,8 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
                 epoch + batch_idx / num_iter,
                 warm_up
             )
-            loss = Lx + lamb * Lu
+            penalty = torch.sum(torch.exp(prior)*(prior - torch.log(logits.mean(dim=0))))
+            loss = Lx + lamb * Lu + penalty
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -133,6 +135,8 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = MSEloss(outputs, labels)
+            penalty = torch.sum(torch.exp(prior) * (prior - torch.log(outputs.mean(dim=0))))
+            loss += penalty
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
@@ -233,9 +237,11 @@ def save_model(epoch, model, model_num):
 
 
 def calculate_prior():
-    label_dist = Normal(torch.tensor([0.1123, 0.1980]), torch.tensor([0.2989, 0.5137]))  # mean and std of arousal and valence in affectnet
+    # label_dist = Normal(torch.tensor([0.1123, 0.1980]), torch.tensor([0.2989, 0.5137]))  # mean and std of arousal and valence in affectnet
     dx = torch.arange(-1, 1, 0.01)
     dx = torch.vstack([dx, dx]).permute(1, 0)
+    # p = label_dist.log_prob(dx)
+    label_dist = Uniform(-1, 1)
     p = label_dist.log_prob(dx)
     return p.cuda(), dx
 
@@ -261,6 +267,7 @@ if __name__ == '__main__':
     MSEloss = nn.MSELoss()
 
     all_loss = [[], []]  # save the history of losses from two networks
+    prior, dx = calculate_prior()
 
     for epoch in range(args.num_epochs + 1):
         lr = args.lr
