@@ -114,7 +114,7 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
             # pred_mean = logits.mean(dim=0)
             # penalty = torch.sum(torch.exp(prior) * (prior - torch.log(pred_mean))) / 2
             penalty = 1 - utils.PCC(logits, mixed_target)
-            loss = Lx + lamb * Lu + 0.1 * penalty
+            loss = Lx + lamb * Lu + penalty
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
         scaler.step(optimizer)
