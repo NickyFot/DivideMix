@@ -135,7 +135,10 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
-            penalty = torch.sum(torch.exp(prior) * (prior - torch.log(outputs.mean(dim=0))))
+            arr_prob = torch.histc(outputs[:, 0], bins=len(dx), min=-1, max=1) / outputs.size(0)
+            val_prob = torch.histc(outputs[:, 1], bins=len(dx), min=-1, max=1) / outputs.size(0)
+            pred_mean = torch.vstack([arr_prob, val_prob]).permute(1, 0)
+            penalty = torch.trapz(torch.exp(prior) * (prior - torch.log(pred_mean)), dim=0).mean()
             loss += penalty
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -238,7 +241,7 @@ def save_model(epoch, model, model_num):
 
 def calculate_prior():
     # label_dist = Normal(torch.tensor([0.1123, 0.1980]), torch.tensor([0.2989, 0.5137]))  # mean and std of arousal and valence in affectnet
-    dx = torch.arange(-1, 1, 0.01)
+    dx = torch.arange(-1, 1, 0.1)
     dx = torch.vstack([dx, dx]).permute(1, 0)
     # p = label_dist.log_prob(dx)
     label_dist = Uniform(-1, 1)
