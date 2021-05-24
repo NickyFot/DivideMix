@@ -134,7 +134,7 @@ def warmup(epoch, net, optimizer, dataloader):
         optimizer.zero_grad()
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
-            loss = MSEloss(outputs, labels)
+            loss = TrainLoss(outputs, labels)
             penalty = torch.sum(torch.exp(prior) * (prior - torch.log(outputs.mean(dim=0))))
             loss += penalty
         scaler.scale(loss).backward()
@@ -179,7 +179,7 @@ def eval_train(model, all_loss) -> (list, list):
             pred.append(outputs)
             true.append(targets)
             expression.append(exp)
-            loss = MSE(outputs, targets).mean(dim=1)
+            loss = PSLoss(outputs, targets).mean(dim=1)
             for b in range(inputs.size(0)):
                 losses[index[b]] = loss[b]
     pred = torch.vstack(pred)
@@ -263,8 +263,8 @@ if __name__ == '__main__':
     criterion = SemiLoss()
     optimizer = optim.Adam(net.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=5e-4)
 
-    MSE = nn.MSELoss(reduction='none')
-    MSEloss = nn.MSELoss()
+    PSLoss = nn.L1Loss(reduction='none')
+    TrainLoss = nn.MSELoss()
 
     all_loss = [[], []]  # save the history of losses from two networks
     prior, dx = calculate_prior()
