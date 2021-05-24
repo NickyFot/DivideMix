@@ -138,7 +138,7 @@ def warmup(epoch, net, optimizer, dataloader):
             outputs = outputs.float()
             arr_prob = torch.histc(outputs[:, 0], bins=len(dx), min=-1, max=1) / outputs.size(0)
             val_prob = torch.histc(outputs[:, 1], bins=len(dx), min=-1, max=1) / outputs.size(0)
-            pred_mean = torch.vstack([arr_prob, val_prob]).permute(1, 0)
+            pred_mean = torch.vstack([arr_prob, val_prob]).permute(1, 0).detach()
             penalty = torch.trapz(torch.exp(prior) * (prior - torch.log(pred_mean)), dim=0).mean()
             loss += penalty
         scaler.scale(loss).backward()
