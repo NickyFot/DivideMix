@@ -111,8 +111,9 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
                 epoch + batch_idx / num_iter,
                 warm_up
             )
-            pred_mean = logits.mean(dim=0)
-            penalty = torch.sum(torch.exp(prior) * (prior - torch.log(pred_mean))) / 2
+            # pred_mean = logits.mean(dim=0)
+            # penalty = torch.sum(torch.exp(prior) * (prior - torch.log(pred_mean))) / 2
+            penalty = 1 - utils.PCC(logits, mixed_target)
             loss = Lx + lamb * Lu + 0.1 * penalty
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
@@ -136,9 +137,10 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
-            pred_mean = outputs.mean(dim=0)
-            penalty = torch.sum(torch.exp(prior) * (prior - torch.log(pred_mean)))/2
-            loss += linear_rampup(epoch, 0, warm_up) * penalty
+            # pred_mean = outputs.mean(dim=0)
+            # penalty = torch.sum(torch.exp(prior) * (prior - torch.log(pred_mean)))/2
+            penalty = 1 - utils.PCC(outputs, labels)
+            loss += penalty
 
         scaler.scale(loss).backward()
         scaler.step(optimizer)
