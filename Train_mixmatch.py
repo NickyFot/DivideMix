@@ -250,7 +250,7 @@ def calculate_prior():
     # p = label_dist.log_prob(dx)
     label_dist = Uniform(-1, 1)
     p = label_dist.log_prob(dx)
-    return label_dist, dx
+    return label_dist, dx.cuda()
 
 
 def histogram(x: torch.tensor, bins: torch.tensor) -> torch.tensor:
