@@ -137,8 +137,9 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
-            pred_dist = histogram(outputs, bins=dx)
-            pred_mean = outputs.apply_(lambda x: onehotprob(x, dx, pred_dist))
+            # pred_dist = utils.histogram(outputs, bins=dx)
+            # pred_mean = outputs.apply_(lambda x: utils.onehotprob(x, dx, pred_dist))
+            pred_mean = conf_penalty(outputs, dx)
             prior_prob = prior.log_prob(outputs)
             penalty = torch.sum(torch.exp(prior_prob) * (prior_prob - torch.log(pred_mean)))/2
             # penalty = 1 - utils.PCC(outputs, labels)
@@ -253,24 +254,6 @@ def calculate_prior():
     return label_dist, dx.cuda()
 
 
-def histogram(x: torch.tensor, bins: torch.tensor) -> torch.tensor:
-    hist = torch.zeros_like(bins).cuda()
-    for i in range(1, len(bins)):
-        upper_lim = bins[i]
-        lower_lim = bins[i - 1]
-        hist[i - 1] = torch.sum(x < upper_lim, dim=0) - torch.sum(x < lower_lim, dim=0)
-    hist /= x.size(0)
-    return hist
-
-def onehotprob(x: float, bins: torch.tensor, hist: torch.tensor) -> torch.tensor:
-    for i in range(1, len(bins)):
-        upper_lim = bins[i]
-        lower_lim = bins[i - 1]
-        if (x > lower_lim) & (x <= upper_lim):
-            return 1 - hist[i]
-    return 0
-
-
 if __name__ == '__main__':
     start_time = datetime.now().strftime('%Y%m%d_%H%M')
     log_folder = './checkpoint/' + start_time + '/'
@@ -290,6 +273,7 @@ if __name__ == '__main__':
 
     PSLoss = nn.L1Loss(reduction='none')
     TrainLoss = nn.MSELoss()
+    conf_penalty = utils.OneHotProb()
 
     all_loss = [[], []]  # save the history of losses from two networks
     prior, dx = calculate_prior()
