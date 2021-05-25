@@ -151,9 +151,9 @@ def warmup(epoch, net, optimizer, dataloader):
         scaler.step(optimizer)
         scaler.update()
         sys.stdout.write('\r')
-        sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t MSE-loss: %.4f'
+        sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t loss: %.4f \t Penalty: %.4f'
                          % (args.dataset, args.r, args.noise_mode, epoch, args.num_epochs, batch_idx + 1, num_iter,
-                            loss.item()))
+                            loss.item(), penalty.item()))
         sys.stdout.flush()
 
 
