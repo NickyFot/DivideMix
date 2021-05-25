@@ -137,10 +137,12 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
-            # pred_mean = outputs.mean(dim=0)
-            # penalty = torch.sum(torch.exp(prior) * (prior - torch.log(pred_mean)))/2
-            penalty = 1 - utils.PCC(outputs, labels)
-            loss += penalty.mean()
+            pred_dist = histogram(outputs, bins=dx)
+            pred_mean = outputs.apply_(lambda x: onehotprob(x, dx, pred_dist))
+            prior_prob = prior.log_prob(outputs)
+            penalty = torch.sum(torch.exp(prior_prob) * (prior_prob - torch.log(pred_mean)))/2
+            # penalty = 1 - utils.PCC(outputs, labels)
+            loss += penalty
 
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -243,12 +245,30 @@ def save_model(epoch, model, model_num):
 
 def calculate_prior():
     # label_dist = Normal(torch.tensor([0.1123, 0.1980]), torch.tensor([0.2989, 0.5137]))  # mean and std of arousal and valence in affectnet
-    dx = torch.arange(-1, 1, 0.1)
+    dx = torch.arange(-1, 1.1, 0.1)
     dx = torch.vstack([dx, dx]).permute(1, 0)
     # p = label_dist.log_prob(dx)
     label_dist = Uniform(-1, 1)
     p = label_dist.log_prob(dx)
-    return p.cuda(), dx
+    return label_dist, dx
+
+
+def histogram(x: torch.tensor, bins: torch.tensor) -> torch.tensor:
+    hist = torch.zeros_like(bins)
+    for i in range(1, len(bins)):
+        upper_lim = bins[i]
+        lower_lim = bins[i - 1]
+        hist[i - 1] = torch.sum(x < upper_lim, dim=0) - torch.sum(x < lower_lim, dim=0)
+    hist /= x.size(0)
+    return hist
+
+def onehotprob(x: float, bins: torch.tensor, hist: torch.tensor) -> torch.tensor:
+    for i in range(1, len(bins)):
+        upper_lim = bins[i]
+        lower_lim = bins[i - 1]
+        if (x > lower_lim) & (x <= upper_lim):
+            return 1 - hist[i]
+    return 0
 
 
 if __name__ == '__main__':
