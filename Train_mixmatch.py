@@ -141,7 +141,9 @@ def warmup(epoch, net, optimizer, dataloader):
             # pred_mean = outputs.apply_(lambda x: utils.onehotprob(x, dx, pred_dist))
             pred_mean = conf_penalty.apply(outputs, dx)
             prior_prob = prior.log_prob(outputs.cpu()).cuda()
-            penalty = torch.sum(torch.exp(prior_prob) * (prior_prob - torch.log(pred_mean)))/2
+            penalty = torch.exp(prior_prob) * (prior_prob - torch.log(pred_mean))
+            penalty = torch.nan_to_num(penalty)
+            penalty = penalty.sum()/2
             # penalty = 1 - utils.PCC(outputs, labels)
             loss += penalty
 
@@ -249,7 +251,7 @@ def calculate_prior():
     dx = torch.arange(-1, 1.1, 0.1)
     dx = torch.vstack([dx, dx]).permute(1, 0)
     # p = label_dist.log_prob(dx)
-    label_dist = Uniform(-1, 1)
+    label_dist = Uniform(-1, 1, validate_args=False)
     p = label_dist.log_prob(dx)
     return label_dist, dx.cuda()
 
