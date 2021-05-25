@@ -41,7 +41,7 @@ class OneHotProb(Function):
         hist = histogram(x, bins)
         # ctx.save_for_backward(x)
         # ctx.save_for_backward(hist)
-        out = torch.zeros_like(x)
+        out = torch.zeros_like(x).cuda()
         for idx, row in enumerate(x):
             for ydx, el in enumerate(row):
                 out[idx, ydx] = onehotprob(el, hist[:, ydx], bins[:, ydx])
