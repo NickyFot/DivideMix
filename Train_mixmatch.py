@@ -139,7 +139,7 @@ def warmup(epoch, net, optimizer, dataloader):
             loss = TrainLoss(outputs, labels)
             # pred_dist = utils.histogram(outputs, bins=dx)
             # pred_mean = outputs.apply_(lambda x: utils.onehotprob(x, dx, pred_dist))
-            pred_mean = conf_penalty(outputs, dx)
+            pred_mean = conf_penalty.apply(outputs, dx)
             prior_prob = prior.log_prob(outputs)
             penalty = torch.sum(torch.exp(prior_prob) * (prior_prob - torch.log(pred_mean)))/2
             # penalty = 1 - utils.PCC(outputs, labels)
@@ -273,7 +273,7 @@ if __name__ == '__main__':
 
     PSLoss = nn.L1Loss(reduction='none')
     TrainLoss = nn.MSELoss()
-    conf_penalty = utils.OneHotProb()
+    conf_penalty = utils.OneHotProb
 
     all_loss = [[], []]  # save the history of losses from two networks
     prior, dx = calculate_prior()
