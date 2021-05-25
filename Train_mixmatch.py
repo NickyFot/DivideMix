@@ -254,7 +254,7 @@ def calculate_prior():
 
 
 def histogram(x: torch.tensor, bins: torch.tensor) -> torch.tensor:
-    hist = torch.zeros_like(bins)
+    hist = torch.zeros_like(bins).cuda()
     for i in range(1, len(bins)):
         upper_lim = bins[i]
         lower_lim = bins[i - 1]
