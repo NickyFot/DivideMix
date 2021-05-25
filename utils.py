@@ -46,6 +46,7 @@ class OneHotProb(Function):
             for ydx, el in enumerate(row):
                 out[idx, ydx] = onehotprob(el, hist[:, ydx], bins[:, ydx])
         ctx.save_for_backward(out)
+        print(x.shape, out.shape)
         return out
 
     @staticmethod
@@ -54,4 +55,4 @@ class OneHotProb(Function):
         out, = ctx.saved_tensors
         print(grad_input.shape)
         # grad_input *= out
-        return grad_output
+        return grad_input
