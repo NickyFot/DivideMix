@@ -52,5 +52,6 @@ class OneHotProb(Function):
     def backward(ctx, grad_output):
         grad_input = grad_output.clone()
         out, = ctx.saved_tensors
+        print(grad_input.shape)
         # grad_input *= out
         return grad_output
