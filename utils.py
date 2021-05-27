@@ -56,3 +56,17 @@ class OneHotProb(Function):
         # print(grad_input.shape)
         # grad_input *= out
         return grad_input, None
+
+
+class Histogram(Function):
+    @staticmethod
+    def forward(ctx, x, bins):
+        hist = histogram(x, bins)
+        ctx.save_for_backward(x)
+        ctx.save_for_backward(hist)
+        return hist
+    @staticmethod
+    def backward(ctx, grad_output):
+        grad_input = grad_output.clone()
+
+        return grad_input, None

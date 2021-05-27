@@ -137,15 +137,19 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
+            conf_penalty = 1 - torch.abs(labels)
+            loss *= conf_penalty
+            loss = loss.mean()
             # pred_dist = utils.histogram(outputs, bins=dx)
             # pred_mean = outputs.apply_(lambda x: utils.onehotprob(x, dx, pred_dist))
-            pred_mean = conf_penalty.apply(outputs, dx)
-            prior_prob = prior.log_prob(outputs.cpu()).cuda()
-            penalty = torch.exp(prior_prob) * (prior_prob - torch.log(pred_mean))
-            penalty = torch.nan_to_num(penalty)
-            penalty = penalty.sum()/2
-            # penalty = 1 - utils.PCC(outputs, labels)
-            loss += penalty
+            # pred_mean = conf_penalty.apply(outputs, dx)
+            # prior_prob = prior.log_prob(outputs.cpu()).cuda()
+            # penalty = torch.exp(prior_prob) * (prior_prob - torch.log(pred_mean))
+            # penalty = torch.nan_to_num(penalty)
+            # penalty = penalty.sum()/2
+            # # penalty = 1 - utils.PCC(outputs, labels)
+            penalty = 0
+            # loss += penalty
 
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -274,7 +278,7 @@ if __name__ == '__main__':
     optimizer = optim.Adam(net.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=5e-4)
 
     PSLoss = nn.L1Loss(reduction='none')
-    TrainLoss = nn.MSELoss()
+    TrainLoss = nn.MSELoss(reduction='none')
     conf_penalty = utils.OneHotProb
 
     all_loss = [[], []]  # save the history of losses from two networks
