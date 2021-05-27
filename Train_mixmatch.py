@@ -148,7 +148,7 @@ def warmup(epoch, net, optimizer, dataloader):
             # penalty = torch.nan_to_num(penalty)
             # penalty = penalty.sum()/2
             # # penalty = 1 - utils.PCC(outputs, labels)
-            penalty = 0
+            penalty = torch.tensor(0)
             # loss += penalty
 
         scaler.scale(loss).backward()
