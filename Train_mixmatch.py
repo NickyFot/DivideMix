@@ -9,16 +9,16 @@ import torch.nn.functional as F
 from torch import nn
 import torch.backends.cudnn as cudnn
 from torch.cuda.amp import GradScaler
-from torch.distributions.normal import Normal
 from torch.distributions.uniform import Uniform
 import random
 import argparse
 import numpy as np
 from ResNet18 import ResNet18
-from sklearn.mixture import GaussianMixture
+# from sklearn.mixture import GaussianMixture
 
 import dataloader_AffectNet as dataloader
-import utils
+from utils import utils
+from utils import GaussianMixture
 
 parser = argparse.ArgumentParser(description='PyTorch AffectNet Training')
 parser.add_argument('--batch_size', default=64, type=int, help='train batchsize')
@@ -137,19 +137,12 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
-            conf_penalty = 1 - torch.abs(labels)
-            loss *= conf_penalty
+            # penalty = torch.abs(labels)
+            # loss *= penalty
+            conf_pen = conf_penalty(outputs)
+            loss += conf_pen
             loss = loss.mean()
-            # pred_dist = utils.histogram(outputs, bins=dx)
-            # pred_mean = outputs.apply_(lambda x: utils.onehotprob(x, dx, pred_dist))
-            # pred_mean = conf_penalty.apply(outputs, dx)
-            # prior_prob = prior.log_prob(outputs.cpu()).cuda()
-            # penalty = torch.exp(prior_prob) * (prior_prob - torch.log(pred_mean))
-            # penalty = torch.nan_to_num(penalty)
-            # penalty = penalty.sum()/2
-            # # penalty = 1 - utils.PCC(outputs, labels)
-            penalty = torch.tensor(0)
-            # loss += penalty
+
 
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -157,7 +150,7 @@ def warmup(epoch, net, optimizer, dataloader):
         sys.stdout.write('\r')
         sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t loss: %.4f \t Penalty: %.4f'
                          % (args.dataset, args.r, args.noise_mode, epoch, args.num_epochs, batch_idx + 1, num_iter,
-                            loss.item(), penalty.item()))
+                            loss.item(), conf_pen.item()))
         sys.stdout.flush()
 
 
@@ -211,10 +204,11 @@ def eval_train(model, all_loss) -> (list, list):
         input_loss = losses.reshape(-1, 1)
 
     # fit a two-component GMM to the loss
-    gmm = GaussianMixture(n_components=2, max_iter=10, tol=1e-2, reg_covar=5e-4)
-    gmm.fit(input_loss)
+    gmm = GaussianMixture(n_components=2, n_features=1) #max_iter=10, tol=1e-2, reg_covar=5e-4)
+    gmm.fit(input_loss, n_iter=15)
     prob = gmm.predict_proba(input_loss)
     prob = prob[:, gmm.means_.argmin()]
+    prob = prob.detach() # using pytorch implementation instead of sklearn
     return prob, all_loss
 
 
@@ -258,6 +252,25 @@ def calculate_prior():
     label_dist = Uniform(-1, 1, validate_args=False)
     p = label_dist.log_prob(dx)
     return label_dist, dx.cuda()
+
+
+def conf_penalty(predicted_labels):
+    predicted_labels = predicted_labels
+    gmm = GaussianMixture(n_components=2, n_features=2)
+    gmm.fit(predicted_labels, n_iter=15)
+    p = prior.log_prob(predicted_labels)
+    p = torch.log(torch.exp(p) + 1e-6)
+
+    q = gmm.score_samples(predicted_labels)
+
+    # def gmm_kl(gmm_p, gmm_q, n_samples=10 ** 5):
+    #     X = gmm_p.sample(n_samples)
+    #     log_p_X, _ = gmm_p.score_samples(X)
+    #     log_q_X, _ = gmm_q.score_samples(X)
+    #     return log_p_X.mean() - log_q_X.mean()
+
+    penalty = torch.sum(p.mean(dim=0) - q.mean(dim=0))
+    return penalty
 
 
 if __name__ == '__main__':
