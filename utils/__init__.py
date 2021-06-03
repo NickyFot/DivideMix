@@ -1,2 +1,2 @@
-import .utils
+from . import utils
 from .gmm import GaussianMixture
