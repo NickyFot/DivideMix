@@ -270,6 +270,7 @@ def conf_penalty(predicted_labels):
     #     return log_p_X.mean() - log_q_X.mean()
 
     penalty = torch.sum(p.mean(dim=0) - q.mean(dim=0))
+    print(type(p), type(q), type(penalty))
     return penalty
 
 
