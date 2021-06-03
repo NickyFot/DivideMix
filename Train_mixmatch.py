@@ -255,7 +255,6 @@ def calculate_prior():
 
 
 def conf_penalty(predicted_labels):
-    predicted_labels = predicted_labels
     gmm = GaussianMixture(n_components=2, n_features=2)
     gmm.fit(predicted_labels, n_iter=15)
     p = prior.log_prob(predicted_labels)
@@ -269,7 +268,7 @@ def conf_penalty(predicted_labels):
     #     log_q_X, _ = gmm_q.score_samples(X)
     #     return log_p_X.mean() - log_q_X.mean()
 
-    penalty = torch.sum(p.mean(dim=0) - q.mean(dim=0))
+    penalty = p.mean() - q.mean()
     print(type(p), type(q), type(penalty))
     return penalty
 
