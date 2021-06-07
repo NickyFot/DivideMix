@@ -16,9 +16,15 @@ class ReplaceValues(object):
         self.new_val = new_value
 
     def __call__(self, x):
+        shape = x.size()
+        random_x = torch.rand(shape)
+        random_x = -2 * random_x + 1
         mask = x == self.val
         new_x = x.clone()
-        new_x[mask] = self.new_val
+        if self.new_val:
+            new_x[mask] = self.new_val
+        else:
+            new_x[mask] = random_x[mask]
         return new_x
 
 
@@ -171,7 +177,7 @@ class AffectNetDataloader(object):
         self.target_transform = transforms.Compose([
             ColumnSelect(['arousal', 'valence']),
             torch.FloatTensor,
-            ReplaceValues(-2, 0)
+            ReplaceValues(-2, None)
         ])
         self.filter_expression = list(range(8))
         self.filter_expression.append(9)  # train on uncertain
