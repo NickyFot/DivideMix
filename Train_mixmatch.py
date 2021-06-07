@@ -208,8 +208,8 @@ def eval_train(model, all_loss) -> (list, list):
     gmm = GaussianMixture(n_components=2, n_features=1) #max_iter=10, tol=1e-2, reg_covar=5e-4)
     gmm.fit(input_loss, n_iter=15)
     prob = gmm.predict_proba(input_loss)
-    prob = prob[:, gmm.means_.argmin()]
-    prob = prob.detach() # using pytorch implementation instead of sklearn
+    prob = prob[:, gmm.mu.argmin()]
+    prob = prob.detach()  # using pytorch implementation instead of sklearn
     return prob, all_loss
 
 
@@ -256,12 +256,17 @@ def calculate_prior():
 
 
 def conf_penalty(predicted_labels):
-    gmm = GaussianMixture(n_components=2, n_features=2)
-    gmm.fit(predicted_labels, n_iter=15)
+    q = torch.zeros_like(predicted_labels)
+    N, D = q.size()
+    for dim in D:
+        gmm = GaussianMixture(n_components=2, n_features=1)
+        fit_data = predicted_labels[:, dim].reshape(-1, 1)
+        gmm.fit(fit_data, n_iter=15)
+        q[:, dim] = gmm.score_samples(fit_data)
+
     p = prior.log_prob(predicted_labels)
     p = torch.log(torch.exp(p) + 1e-6)
 
-    q = gmm.score_samples(predicted_labels)
 
     # def gmm_kl(gmm_p, gmm_q, n_samples=10 ** 5):
     #     X = gmm_p.sample(n_samples)
@@ -269,7 +274,7 @@ def conf_penalty(predicted_labels):
     #     log_q_X, _ = gmm_q.score_samples(X)
     #     return log_p_X.mean() - log_q_X.mean()
 
-    penalty = p.mean() - q.mean()
+    penalty = torch.mean(p-q)
     print(type(p), type(q), type(penalty))
     return penalty
 

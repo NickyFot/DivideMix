@@ -10,6 +10,18 @@ import cv2
 import torch
 
 
+class ReplaceValues(object):
+    def __init__(self, value, new_value):
+        self.val = value
+        self.new_val = new_value
+
+    def __call__(self, x):
+        mask = x == self.val
+        new_x = x.clone()
+        new_x[mask] = self.new_val
+        return new_x
+
+
 class ColumnSelect(object):
     def __init__(self, keys: list):
         self.keys = keys
@@ -156,7 +168,11 @@ class AffectNetDataloader(object):
                 transforms.ToTensor(),
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
-        self.target_transform = transforms.Compose([ColumnSelect(['arousal', 'valence']), torch.FloatTensor])
+        self.target_transform = transforms.Compose([
+            ColumnSelect(['arousal', 'valence']),
+            torch.FloatTensor,
+            ReplaceValues(-2, 0)
+        ])
         self.filter_expression = list(range(8))
         self.filter_expression.append(9)  # train on uncertain
 
