@@ -264,8 +264,9 @@ def conf_penalty(predicted_labels):
         gmm.fit(fit_data, n_iter=15)
         q[:, dim] = gmm.score_samples(fit_data)
 
-    p = prior.log_prob(predicted_labels)
+    p = prior.log_prob(predicted_labels.cpu())
     p = torch.log(torch.exp(p) + 1e-6)
+    p = p.cuda()
 
 
     # def gmm_kl(gmm_p, gmm_q, n_samples=10 ** 5):
