@@ -141,7 +141,7 @@ def warmup(epoch, net, optimizer, dataloader):
             # loss *= penalty
             conf_pen = conf_penalty(outputs)
             loss += conf_pen
-            conf_pen = torch.tensor([0])
+            # conf_pen = torch.tensor([0])
             loss = loss.mean()
 
 
@@ -298,7 +298,7 @@ if __name__ == '__main__':
 
     PSLoss = nn.L1Loss(reduction='none')
     TrainLoss = nn.MSELoss(reduction='none')
-    conf_penalty = utils.OneHotProb
+    # conf_penalty = utils.OneHotProb
 
     all_loss = [[], []]  # save the history of losses from two networks
     prior, dx = calculate_prior()
