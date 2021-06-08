@@ -258,7 +258,7 @@ def calculate_prior():
 def conf_penalty(predicted_labels):
     q = torch.zeros_like(predicted_labels)
     N, D = q.size()
-    for dim in D:
+    for dim in range(D):
         gmm = GaussianMixture(n_components=2, n_features=1)
         fit_data = predicted_labels[:, dim].reshape(-1, 1)
         gmm.fit(fit_data, n_iter=15)
