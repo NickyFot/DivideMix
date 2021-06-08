@@ -140,7 +140,7 @@ def warmup(epoch, net, optimizer, dataloader):
             # penalty = torch.abs(labels)
             # loss *= penalty
             conf_pen = conf_penalty(outputs)
-            loss += 0.1*conf_pen
+            loss -= 0.1 * conf_pen.mean()
             # conf_pen = torch.tensor([0])
             loss = loss.mean()
 
@@ -277,7 +277,7 @@ def conf_penalty(predicted_labels):
     #     log_q_X, _ = gmm_q.score_samples(X)
     #     return log_p_X.mean() - log_q_X.mean()
 
-    penalty = torch.sum(torch.exp(p)*(p-q))*0.5
+    penalty = torch.trapz(torch.exp(p)*(p-q), predicted_labels, dim=1)
     # print(type(p), type(q), type(penalty))
     return penalty
 
