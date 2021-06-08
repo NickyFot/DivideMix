@@ -259,7 +259,7 @@ def conf_penalty(predicted_labels):
     q = torch.zeros_like(predicted_labels)
     N, D = q.size()
     for dim in range(D):
-        gmm = GaussianMixture(n_components=2, n_features=1)
+        gmm = GaussianMixture(n_components=2, n_features=1).cuda()
         fit_data = predicted_labels[:, dim].reshape(-1, 1)
         gmm.fit(fit_data, n_iter=15)
         q[:, dim] = gmm.score_samples(fit_data)
