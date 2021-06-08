@@ -180,7 +180,7 @@ class AffectNetDataloader(object):
             ReplaceValues(-2, None)
         ])
         self.filter_expression = list(range(8))
-        self.filter_expression.append(9)  # train on uncertain
+        # self.filter_expression.append(9)  # train on uncertain
 
         self.filter_expression_test = list(range(8))
 
