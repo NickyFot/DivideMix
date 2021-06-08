@@ -265,10 +265,10 @@ def conf_penalty(predicted_labels):
         gmm.eval()
         with torch.no_grad():
             q[:, dim] = gmm.score_samples(fit_data)
-
-    p = prior.log_prob(predicted_labels.cpu())
-    p = torch.log(torch.exp(p) + 1e-6)
-    p = p.cuda()
+    with torch.no_grad():
+        p = prior.log_prob(predicted_labels.cpu())
+        p = torch.log(torch.exp(p) + 1e-6)
+        p = p.cuda()
 
 
     # def gmm_kl(gmm_p, gmm_q, n_samples=10 ** 5):
