@@ -142,7 +142,7 @@ def warmup(epoch, net, optimizer, dataloader):
             # penalty = torch.abs(labels)
             # loss *= penalty
             conf_pen = conf_penalty(outputs).mean()
-            loss -= 0.1 * conf_pen
+            loss -=  conf_pen
             # conf_pen = torch.tensor([0])
 
 
