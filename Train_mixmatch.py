@@ -258,7 +258,8 @@ def calculate_prior():
     return label_dist, dx.cuda()
 
 
-def conf_penalty(predicted_labels):
+def conf_penalty(predicted_labels: torch.tensor):
+    predicted_labels = predicted_labels.float()
     q = torch.zeros_like(predicted_labels)
     N, D = q.size()
     for dim in range(D):
