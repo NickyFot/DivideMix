@@ -10,6 +10,7 @@ from torch import nn
 import torch.backends.cudnn as cudnn
 from torch.cuda.amp import GradScaler
 from torch.distributions.uniform import Uniform
+from torch.distributions.normal import Normal
 import random
 import argparse
 import numpy as np
@@ -251,7 +252,8 @@ def calculate_prior():
     dx = torch.arange(-1, 1.1, 0.1)
     dx = torch.vstack([dx, dx]).permute(1, 0)
     # p = label_dist.log_prob(dx)
-    label_dist = Uniform(-1, 1, validate_args=False)
+    # label_dist = Uniform(-1, 1, validate_args=False)
+    label_dist = Normal(0, 0.58)
     p = label_dist.log_prob(dx)
     return label_dist, dx.cuda()
 
