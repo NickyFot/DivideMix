@@ -160,6 +160,7 @@ def test(net1):
         for batch_idx, (inputs, targets, _) in enumerate(test_loader):
             inputs, targets = inputs.cuda(), targets.reshape(-1).cuda()
             outputs1 = net1(inputs)
+            _, outputs1 = torch.max(outputs1, 1)
             total += targets.size(0)
             correct += outputs1.eq(targets).cpu().sum().item()
         acc = 100. * correct / total
