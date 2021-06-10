@@ -137,8 +137,8 @@ def warmup(epoch, net, optimizer, dataloader):
         optimizer.zero_grad()
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
-            print(outputs)
-            print(labels)
+            # print(outputs)
+            # print(labels)
             loss = TrainLoss(outputs, labels)
             conf_pen = conf_penalty(outputs)
             loss += conf_pen

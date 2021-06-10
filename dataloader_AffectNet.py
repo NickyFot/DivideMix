@@ -17,7 +17,7 @@ class Digitize(object):
         self._boundaries = torch.arange(self._start, self._end, step)
 
     def __call__(self, x: torch.tensor) -> torch.tensor:
-        return torch.bucketize(x, boundaries=self._boundaries)
+        return torch.bucketize(x, boundaries=self._boundaries) - 1
 
 
 class ReplaceValues(object):
@@ -188,7 +188,7 @@ class AffectNetDataloader(object):
             ColumnSelect(['arousal']),
             torch.FloatTensor,
             # ReplaceValues(-2, None),
-            Digitize(range=(-1, 1), step=0.01)
+            Digitize(range=(-1, 1.01), step=0.01)
         ])
         self.filter_expression = list(range(8))
         # self.filter_expression.append(9)  # train on uncertain
