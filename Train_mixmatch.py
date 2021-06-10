@@ -218,7 +218,7 @@ class SemiLoss(object):
 
 
 def create_model():
-    model = ResNet18(do_regr=False, do_cls=False, variance=False, pretrained=True, num_classes=200)
+    model = ResNet18(do_regr=False, do_cls=True, variance=False, pretrained=True, num_classes=200)
     if args.load_model:
         state_dct = torch.load(args.load_model, map_location=torch.device('cpu'))
         new_state = dict()
