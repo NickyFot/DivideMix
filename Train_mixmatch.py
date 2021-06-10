@@ -151,23 +151,18 @@ def warmup(epoch, net, optimizer, dataloader):
         sys.stdout.flush()
 
 
-def test(epoch, net1):
+def test(net1):
     net1.eval()
-    true = list()
-    pred = list()
+    correct = 0
+    total = 0
     with torch.no_grad():
         for batch_idx, (inputs, targets, _) in enumerate(test_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs1 = net1(inputs)
-            true.append(targets)
-            pred.append(outputs1)
-    true = torch.vstack(true)
-    pred = torch.vstack(pred)
-    rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
-    pcc = utils.PCC(true, pred)
-    print("\n| Test Epoch #{}\t Arr RMSE: {}, Val RMSE:  {}\n Arr PCC: {} Val PCC: {} \n".format(epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
-    test_log.write('Epoch:{}   Arr RMSE: {}, Val RMSE:  {}, Arr PCC: {} Val PCC: {} \n'.format(epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
-    test_log.flush()
+            total += targets.size(0)
+            correct += outputs1.eq(targets).cpu().sum().item()
+        acc = 100. * correct / total
+        print("\n| Test Acc: %.2f%%\n" % (acc))
 
 
 def eval_train(model, all_loss) -> (list, list):
