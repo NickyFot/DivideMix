@@ -145,7 +145,10 @@ def warmup(epoch, net, optimizer, dataloader):
             conf_pen = conf_penalty(outputs)
             loss += conf_pen
         scaler.scale(loss).backward()
-        scaler.step(optimizer)
+        try:
+            scaler.step(optimizer)
+        except:
+            print(outputs, labels)
         scaler.update()
         sys.stdout.write('\r')
         sys.stdout.write('%s:%.1f-%s | Epoch [%3d/%3d] Iter[%3d/%3d]\t loss: %.4f \t Penalty: %.4f'
