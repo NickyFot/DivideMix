@@ -5,7 +5,7 @@ from torchvision.models import resnet
 
 
 class ResNet18(nn.Module):
-    def __init__(self, do_regr, do_cls, variance=False, pretrained=True):
+    def __init__(self, do_regr, do_cls, variance=False, pretrained=True, num_classes=None):
         super().__init__()
         self.do_regr = do_regr
         self.do_cls = do_cls
@@ -15,7 +15,10 @@ class ResNet18(nn.Module):
 
         backbone = resnet.resnet18(pretrained=pretrained)
         self.backbone = torch.nn.Sequential(*(list(backbone.children())[:-1]))
-        self.linear_regr = nn.Linear(512, 2)
+        if do_regr:
+            self.linear_regr = nn.Linear(512, 2)
+        if num_classes and self.do_cls:
+            self.linear_cls = nn.Linear(512, num_classes)
         if self.do_var:
             self.linear_var = nn.Linear(512, 2)
             def mini_init(m):
@@ -35,7 +38,7 @@ class ResNet18(nn.Module):
         if self.do_cls:
             out_cls = self.linear_cls(out)
             preds['cls'] = out_cls
-
+            return out_cls
         if self.do_var:
             var = self.linear_var(out)
             preds['var'] = var

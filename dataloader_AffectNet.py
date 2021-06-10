@@ -10,6 +10,16 @@ import cv2
 import torch
 
 
+class Digitize(object):
+    def __init__(self, range: tuple, step: float):
+        self._start = range[0]
+        self._end = range[1]
+        self._boundaries = torch.arange(self._start, self._end, step)
+
+    def __call__(self, x: torch.tensor) -> torch.tensor:
+        return torch.bucketize(x, boundaries=self._boundaries)
+
+
 class ReplaceValues(object):
     def __init__(self, value, new_value):
         self.val = value
@@ -177,7 +187,8 @@ class AffectNetDataloader(object):
         self.target_transform = transforms.Compose([
             ColumnSelect(['arousal', 'valence']),
             torch.FloatTensor,
-            ReplaceValues(-2, None)
+            # ReplaceValues(-2, None),
+            Digitize(range=(-1, 1), step=0.01)
         ])
         self.filter_expression = list(range(8))
         # self.filter_expression.append(9)  # train on uncertain
