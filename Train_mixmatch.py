@@ -137,8 +137,8 @@ def warmup(epoch, net, optimizer, dataloader):
         optimizer.zero_grad()
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
+            _, outputs = torch.max(outputs, 1)
             loss = TrainLoss(outputs, labels)
-            loss = loss.mean()
             conf_pen = conf_penalty(outputs)
             loss += conf_pen
         scaler.scale(loss).backward()
@@ -159,6 +159,7 @@ def test(net1):
         for batch_idx, (inputs, targets, _) in enumerate(test_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs1 = net1(inputs)
+            _, outputs1 = torch.max(outputs1, 1)
             total += targets.size(0)
             correct += outputs1.eq(targets).cpu().sum().item()
         acc = 100. * correct / total
@@ -172,9 +173,10 @@ def eval_train(model, all_loss) -> (list, list):
     pred, true, expression = list(), list(), list()
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
-            exp = targets[:, 2]
-            inputs, targets = inputs.cuda(), targets[:, :2].cuda()
+            exp = targets[:, 1]
+            inputs, targets = inputs.cuda(), targets[:, :1].cuda()
             outputs = model(inputs)
+            _, outputs = torch.max(outputs, 1)
             pred.append(outputs)
             true.append(targets)
             expression.append(exp)
