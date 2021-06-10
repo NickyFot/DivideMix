@@ -292,7 +292,7 @@ if __name__ == '__main__':
             print('Train Net')
             labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred, prob=prob)
             train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader)
-        test(epoch, net)
+        test(net)
         save_model(epoch, net, 0)
 
 # python Train_affectnet.py --batch_size 32 --multigpu --data_path /import/nobackup_mmv_ioannisp/shared/datasets/AffectNet/ --lambda_u 1 --alpha 1 --r 0.9
