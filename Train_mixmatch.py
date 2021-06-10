@@ -137,7 +137,6 @@ def warmup(epoch, net, optimizer, dataloader):
         optimizer.zero_grad()
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
-            _, outputs = torch.max(outputs, 1)
             # print(outputs.shape, labels.shape)
             loss = TrainLoss(outputs, labels)
             conf_pen = conf_penalty(outputs)
@@ -160,7 +159,6 @@ def test(net1):
         for batch_idx, (inputs, targets, _) in enumerate(test_loader):
             inputs, targets = inputs.cuda(), targets.reshape(-1).cuda()
             outputs1 = net1(inputs)
-            _, outputs1 = torch.max(outputs1, 1)
             total += targets.size(0)
             correct += outputs1.eq(targets).cpu().sum().item()
         acc = 100. * correct / total
@@ -177,11 +175,10 @@ def eval_train(model, all_loss) -> (list, list):
             exp = targets[:, 1]
             inputs, targets = inputs.cuda(), targets[:, :1].reshape(-1).cuda()
             outputs = model(inputs)
-            _, outputs = torch.max(outputs, 1)
             pred.append(outputs)
             true.append(targets)
             expression.append(exp)
-            loss = PSLoss(outputs, targets).mean(dim=1)
+            loss = PSLoss(outputs, targets)
             for b in range(inputs.size(0)):
                 losses[index[b]] = loss[b]
     pred = torch.vstack(pred)
