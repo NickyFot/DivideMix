@@ -188,7 +188,8 @@ class AffectNetDataloader(object):
             ColumnSelect(['arousal']),
             torch.FloatTensor,
             # ReplaceValues(-2, None),
-            Digitize(range=(-1, 1.01), step=0.1)
+            Digitize(range=(-1, 1.01), step=0.1),
+            torch.LongTensor
         ])
         self.filter_expression = list(range(8))
         # self.filter_expression.append(9)  # train on uncertain
