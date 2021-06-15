@@ -186,7 +186,7 @@ def eval_train(model, all_loss) -> (list, list):
     pred = torch.vstack(pred)
     true = torch.cat(true)
     expression = torch.cat(expression)
-    np.savez('checkpoint/data.npz', pred.cpu(), true.cpu(), expression)
+    np.savez('checkpoint/data.npz', pred.cpu(), true.cpu(), expression.cpu())
     losses = (losses - losses.min()) / (losses.max() - losses.min())
     all_loss.append(losses)
 
