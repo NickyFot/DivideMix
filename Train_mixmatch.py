@@ -133,7 +133,7 @@ def warmup(epoch, net, optimizer, dataloader):
     net.train()
     num_iter = (len(dataloader.dataset) // dataloader.batch_size) + 1
     for batch_idx, (inputs, labels, _) in enumerate(dataloader):
-        inputs, labels = inputs.cuda(), labels.reshape(-1).cuda()
+        inputs, labels = inputs.cuda(), labels[:, 2].cuda()
         optimizer.zero_grad()
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
@@ -158,7 +158,7 @@ def test(net1):
     total = 0
     with torch.no_grad():
         for batch_idx, (inputs, targets, _) in enumerate(test_loader):
-            inputs, targets = inputs.cuda(), targets.reshape(-1).cuda()
+            inputs, targets = inputs.cuda(), targets[:, 2].cuda()
             outputs1 = net1(inputs)
             _, outputs1 = torch.max(outputs1, 1)
             total += targets.size(0)
@@ -174,13 +174,13 @@ def eval_train(model, all_loss) -> (list, list):
     pred, true, expression = list(), list(), list()
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
-            exp = targets[:, 1]
-            inputs, targets = inputs.cuda(), targets[:, :1].reshape(-1).cuda().long()
+            exp = targets[:, 2].cuda().long()
+            inputs, targets = inputs.cuda(), targets[:, :2].cuda().long()
             outputs = model(inputs)
             pred.append(outputs)
             true.append(targets)
             expression.append(exp)
-            loss = PSLoss(outputs, targets)
+            loss = PSLoss(outputs, exp)
             for b in range(inputs.size(0)):
                 losses[index[b]] = loss[b]
     pred = torch.vstack(pred)
@@ -220,7 +220,7 @@ class SemiLoss(object):
 
 
 def create_model():
-    model = ResNet18(do_regr=False, do_cls=True, variance=False, pretrained=True, num_classes=20)
+    model = ResNet18(do_regr=False, do_cls=True, variance=False, pretrained=True, num_classes=8)
     if args.load_model:
         state_dct = torch.load(args.load_model, map_location=torch.device('cpu'))
         new_state = dict()
@@ -235,7 +235,10 @@ def create_model():
 
 
 def save_model(epoch, model, model_num):
-    torch.save(model.state_dict(), log_folder +'%s_lr%.1f_epoch%s_ensemble%s' % (args.dataset, args.r, str(epoch), str(model_num)) + '_model.pth')
+    torch.save(
+        model.state_dict(),
+        log_folder +'%s_lr%.1f_epoch%s_ensemble%s' % (args.dataset, args.r, str(epoch), str(model_num)) + '_model.pth'
+    )
 
 
 class NegEntropy(object):
