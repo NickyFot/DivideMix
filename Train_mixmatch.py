@@ -175,7 +175,7 @@ def eval_train(model, all_loss) -> (list, list):
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
             exp = targets[:, 2].cuda().long()
-            inputs, targets = inputs.cuda(), targets[:, :2].long().cuda()
+            inputs, targets = inputs.cuda(), targets[:, :2].cuda()
             outputs = model(inputs)
             pred.append(outputs)
             true.append(targets)
