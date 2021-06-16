@@ -16,7 +16,7 @@ import numpy as np
 # from InceptionResNetV2 import *
 from ResNet18 import ResNet18
 from sklearn.mixture import GaussianMixture
-
+from matplotlib import pyplot as plt
 import dataloader_AffectNet as dataloader
 import utils
 
@@ -48,37 +48,74 @@ torch.manual_seed(args.seed)
 torch.cuda.manual_seed_all(args.seed)
 
 
-def test(net):
-    net.eval()
-    true = list()
-    pred = list()
+# def test(net):
+#     net.eval()
+#     true = list()
+#     pred = list()
+#     with torch.no_grad():
+#         for batch_idx, (inputs, targets, _) in enumerate(test_loader):
+#             inputs, targets = inputs.cuda(), targets.cuda()
+#             outputs1 = net(inputs)
+#             true.append(targets)
+#             pred.append(outputs1)
+#     true = torch.vstack(true)
+#     pred = torch.vstack(pred)
+#     if args.savedata:
+#         np.savez('checkpoint/data.npz', pred.cpu(), true.cpu())
+#     rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
+#     pcc = utils.PCC(true, pred)
+#     ccc = utils.CCC(true, pred)
+#     print(
+#         "\n| Test \t Arr RMSE: {}, Val RMSE:  {}\n Arr PCC: {} Val PCC: {} \n Arr CCC: {} Val CCC: {} \n ".format(
+#             rmse[0],
+#             rmse[1],
+#             pcc[0],
+#             pcc[1],
+#             ccc[0],
+#             ccc[1]
+#         )
+#     )
+
+def get_hist(model):
+    model.eval()
+    clean_size, noisy_size = len(clean_loader.dataset), len(noisy_loader.dataset)
+    clean_losses = torch.zeros(clean_size)
+    noisy_losses = torch.zeros(noisy_size)
     with torch.no_grad():
-        for batch_idx, (inputs, targets, _) in enumerate(test_loader):
-            inputs, targets = inputs.cuda(), targets.cuda()
-            outputs1 = net(inputs)
-            true.append(targets)
-            pred.append(outputs1)
-    true = torch.vstack(true)
-    pred = torch.vstack(pred)
-    if args.savedata:
-        np.savez('checkpoint/data.npz', pred.cpu(), true.cpu())
-    rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
-    pcc = utils.PCC(true, pred)
-    ccc = utils.CCC(true, pred)
-    print(
-        "\n| Test \t Arr RMSE: {}, Val RMSE:  {}\n Arr PCC: {} Val PCC: {} \n Arr CCC: {} Val CCC: {} \n ".format(
-            rmse[0],
-            rmse[1],
-            pcc[0],
-            pcc[1],
-            ccc[0],
-            ccc[1]
-        )
-    )
+        for batch_idx, (inputs, targets, index) in enumerate(clean_loader):
+            exp = targets[:, 2].cuda().long()
+            inputs, targets = inputs.cuda(), targets[:, :2].cuda()
+            outputs = model(inputs)
+            loss = PSLoss(outputs, exp)
+            for b in range(inputs.size(0)):
+                clean_losses[index[b]] = loss[b]
+        for batch_idx, (inputs, targets, index) in enumerate(noisy_loader):
+            exp = targets[:, 2].cuda().long()
+            inputs, targets = inputs.cuda(), targets[:, :2].cuda()
+            outputs = model(inputs)
+            loss = PSLoss(outputs, exp)
+            for b in range(inputs.size(0)):
+                noisy_losses[index[b]] = loss[b]
+    losses = torch.cat([clean_losses, noisy_losses])
+    losses = (losses - losses.min()) / (losses.max() - losses.min())
+
+    losses = losses.cpu().numpy()
+    gmm = GaussianMixture(n_components=2, max_iter=15, reg_covar=5e-4, tol=1e-2)
+    gmm.fit(losses)
+
+    plt.hist(losses[:clean_size], bins=20, alpha=0.7, label='clean', density=False)
+    plt.hist(losses[clean_size:], bins=20, alpha=0.6, label='noisy', density=False)
+    x = np.linspace(0, 1, 1000).reshape(-1, 1)
+    logprob = gmm.score_samples(x)
+    pdf = np.exp(logprob)
+    plt.twinx()
+    plt.plot(x, pdf, '-k', label='GMM')
+    plt.legend()
+    plt.savefig('histograms.png')
 
 
 def create_model(model_pth: str):
-    model = ResNet18(True, False, variance=False, pretrained=False)
+    model = ResNet18(do_regr=False, do_cls=True, variance=False, pretrained=True, num_classes=8)
     state_dct = torch.load(model_pth, map_location=torch.device('cpu'))
     new_state = dict()
     for key in state_dct:
@@ -94,16 +131,25 @@ def create_model(model_pth: str):
 if __name__ == '__main__':
     net1 = create_model(args.model_path)
     cudnn.benchmark = True
-    MSEloss = nn.MSELoss()
+    PSLoss = nn.CrossEntropyLoss(reduction='none')
 
     all_loss = [[], []]  # save the history of losses from two networks
 
-    loader = dataloader.AffectNetDataloader(
+    clean_data = dataloader.AffectNetDataloader(
         batch_size=args.batch_size,
         num_workers=5,
         root_dir=args.data_path,
         log=None,
-        partition=args.partition
+        artifitial_noise='clean'
     )
-    test_loader = loader.run(mode='test')
-    test(net1)
+    noisy_data = dataloader.AffectNetDataloader(
+        batch_size=args.batch_size,
+        num_workers=5,
+        root_dir=args.data_path,
+        log=None,
+        artifitial_noise='noisy'
+    )
+    clean_loader = clean_data.run(mode='eval_train')
+    noisy_loader = noisy_data.run(mode='eval_train')
+    get_hist(net1)
+
