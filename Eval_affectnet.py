@@ -1,15 +1,9 @@
 from __future__ import print_function
 import sys
 import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
 from torch import nn
 import torch.backends.cudnn as cudnn
-from torch.cuda.amp import GradScaler
-from torch.distributions.normal import Normal
 import random
-import os
 import argparse
 import numpy as np
 # from PreResNet import *
@@ -95,17 +89,17 @@ def get_hist(model):
             sys.stdout.write('%s: Clean Data | Iter[%3d/%3d]' % (args.dataset, batch_idx + 1, num_iter))
             sys.stdout.flush()
 
-            num_iter = noisy_size // noisy_loader.batch_size + 1
-            for batch_idx, (inputs, targets, index) in enumerate(noisy_loader):
-                exp = targets[:, 2].cuda().long()
-                inputs, targets = inputs.cuda(), targets[:, :2].cuda()
-                outputs = model(inputs)
-                loss = PSLoss(outputs, exp)
-                for b in range(inputs.size(0)):
-                    noisy_losses[index[b]] = loss[b]
-                sys.stdout.write('\r')
-                sys.stdout.write('%s: Noisy Data | Iter[%3d/%3d]' % (args.dataset, batch_idx + 1, num_iter))
-                sys.stdout.flush()
+        num_iter = noisy_size // noisy_loader.batch_size + 1
+        for batch_idx, (inputs, targets, index) in enumerate(noisy_loader):
+            exp = targets[:, 2].cuda().long()
+            inputs, targets = inputs.cuda(), targets[:, :2].cuda()
+            outputs = model(inputs)
+            loss = PSLoss(outputs, exp)
+            for b in range(inputs.size(0)):
+                noisy_losses[index[b]] = loss[b]
+            sys.stdout.write('\r')
+            sys.stdout.write('%s: Noisy Data | Iter[%3d/%3d]' % (args.dataset, batch_idx + 1, num_iter))
+            sys.stdout.flush()
 
     losses = torch.cat([clean_losses, noisy_losses])
     losses = (losses - losses.min()) / (losses.max() - losses.min())
@@ -144,8 +138,6 @@ if __name__ == '__main__':
     net1 = create_model(args.model_path)
     cudnn.benchmark = True
     PSLoss = nn.CrossEntropyLoss(reduction='none')
-
-    all_loss = [[], []]  # save the history of losses from two networks
 
     clean_data = dataloader.AffectNetDataloader(
         batch_size=args.batch_size,

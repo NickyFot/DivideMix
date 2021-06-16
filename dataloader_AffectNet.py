@@ -162,7 +162,7 @@ class AffectNet(Dataset):
         if artifitial_noise:
             noisy_idx = json.load(open('noisy_idx.json'))
             clean = [idx for idx, datum in enumerate(self.data['annotations']) if datum['id'] not in noisy_idx]
-            noisy = [idx for idx, _ in enumerate(self.data['annotations']) if idx not in clean]
+            noisy = [idx for idx in list(range(len(self.data['annotations']))) if idx not in clean]
             if artifitial_noise == 'clean':
                 self.data['images'] = [img for idx, img in enumerate(self.data['images']) if idx in clean]
                 self.data['annotations'] = [img for idx, img in enumerate(self.data['annotations']) if idx in clean]
