@@ -116,7 +116,7 @@ class AffectNet(Dataset):
         prob = self.probability[idx]
         return img1, img2, target, prob
 
-    def _clean_data(self, filter_expressions: list = None, partition: str = None):
+    def _clean_data(self, filter_expressions: list = None, partition: str = None, artifitial_noise: str = None):
         if filter_expressions:
             new_img = list()
             new_annot = list()
@@ -159,6 +159,9 @@ class AffectNet(Dataset):
             else:
                 self.data['images'] = [img for idx, img in enumerate(self.data['images']) if idx in noisy]
                 self.data['annotations'] = [img for idx, img in enumerate(self.data['annotations']) if idx in noisy]
+        if artifitial_noise:
+            noisy = json.load(open('noisy_idx.json'))
+            clean = [idx for idx, datum in enumerate(self.data['annotations']) if datum['id'] not in noisy]
 
 
 class AffectNetDataloader(object):
@@ -277,7 +280,6 @@ class AffectNetDataloader(object):
             )
             return test_loader
         elif mode == 'eval_train':
-            # target_transform = transforms.Compose([ColumnSelect(['arousal', 'valence', 'expression']), torch.FloatTensor])
             eval_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,

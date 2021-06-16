@@ -171,22 +171,22 @@ def eval_train(model, all_loss) -> (list, list):
     model.eval()
     samples_size = len(eval_loader.dataset)
     losses = torch.zeros(samples_size)
-    pred, true, expression = list(), list(), list()
+    # pred, true, expression = list(), list(), list()
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
             exp = targets[:, 2].cuda().long()
             inputs, targets = inputs.cuda(), targets[:, :2].cuda()
             outputs = model(inputs)
-            pred.append(outputs)
-            true.append(targets)
-            expression.append(exp)
+            # pred.append(outputs)
+            # true.append(targets)
+            # expression.append(exp)
             loss = PSLoss(outputs, exp)
             for b in range(inputs.size(0)):
                 losses[index[b]] = loss[b]
-    pred = torch.vstack(pred)
-    true = torch.cat(true)
-    expression = torch.cat(expression)
-    np.savez('checkpoint/data.npz', pred.cpu(), true.cpu(), expression.cpu())
+    # pred = torch.vstack(pred)
+    # true = torch.cat(true)
+    # expression = torch.cat(expression)
+    # np.savez('checkpoint/data.npz', pred.cpu(), true.cpu(), expression.cpu())
     losses = (losses - losses.min()) / (losses.max() - losses.min())
     all_loss.append(losses)
 
@@ -200,9 +200,10 @@ def eval_train(model, all_loss) -> (list, list):
     # fit a two-component GMM to the loss
     gmm = GaussianMixture(n_components=2, n_features=1) #max_iter=10, tol=1e-2, reg_covar=5e-4)
     gmm.fit(input_loss, n_iter=15)
-    prob = gmm.predict_proba(input_loss)
-    prob = prob[:, gmm.mu.argmin()]
-    prob = prob.detach()  # using pytorch implementation instead of sklearn
+    with torch.no_grad():
+        prob = gmm.predict_proba(input_loss)
+        prob = prob[:, gmm.mu.argmin()]
+        prob = prob.detach()  # using pytorch implementation instead of sklearn
     return prob, all_loss
 
 
@@ -213,7 +214,9 @@ def linear_rampup(current, warm_up, rampup_length=16):
 
 class SemiLoss(object):
     def __call__(self, outputs_x, targets_x, outputs_u, targets_u, epoch, warm_up):
-        Lu = F.mse_loss(outputs_u, targets_u)
+        probs_u = torch.softmax(outputs_u, dim=1)
+
+        Lu = torch.mean((probs_u - targets_u)**2)
         Lx = F.mse_loss(outputs_x, targets_x)
 
         return Lx, Lu, linear_rampup(epoch, warm_up)
