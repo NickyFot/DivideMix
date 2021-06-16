@@ -82,6 +82,8 @@ def get_hist(model):
     clean_losses = torch.zeros(clean_size)
     noisy_losses = torch.zeros(noisy_size)
     with torch.no_grad():
+
+        num_iter = clean_size // clean_loader.batch_size + 1
         for batch_idx, (inputs, targets, index) in enumerate(clean_loader):
             exp = targets[:, 2].cuda().long()
             inputs, targets = inputs.cuda(), targets[:, :2].cuda()
@@ -89,13 +91,22 @@ def get_hist(model):
             loss = PSLoss(outputs, exp)
             for b in range(inputs.size(0)):
                 clean_losses[index[b]] = loss[b]
-        for batch_idx, (inputs, targets, index) in enumerate(noisy_loader):
-            exp = targets[:, 2].cuda().long()
-            inputs, targets = inputs.cuda(), targets[:, :2].cuda()
-            outputs = model(inputs)
-            loss = PSLoss(outputs, exp)
-            for b in range(inputs.size(0)):
-                noisy_losses[index[b]] = loss[b]
+            sys.stdout.write('\r')
+            sys.stdout.write('%s: Clean Data | Iter[%3d/%3d]' % (args.dataset, batch_idx + 1, num_iter))
+            sys.stdout.flush()
+
+            num_iter = noisy_size // noisy_loader.batch_size + 1
+            for batch_idx, (inputs, targets, index) in enumerate(noisy_loader):
+                exp = targets[:, 2].cuda().long()
+                inputs, targets = inputs.cuda(), targets[:, :2].cuda()
+                outputs = model(inputs)
+                loss = PSLoss(outputs, exp)
+                for b in range(inputs.size(0)):
+                    noisy_losses[index[b]] = loss[b]
+                sys.stdout.write('\r')
+                sys.stdout.write('%s: Noisy Data | Iter[%3d/%3d]' % (args.dataset, batch_idx + 1, num_iter))
+                sys.stdout.flush()
+
     losses = torch.cat([clean_losses, noisy_losses])
     losses = (losses - losses.min()) / (losses.max() - losses.min())
 
