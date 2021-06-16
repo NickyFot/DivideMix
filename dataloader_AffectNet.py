@@ -204,7 +204,7 @@ class AffectNetDataloader(object):
             all_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det_noisy.json',
                 target_transform=self.target_transform,
                 mode=None,
                 filter_expressions=self.filter_expression,
@@ -225,7 +225,7 @@ class AffectNetDataloader(object):
             labeled_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det_noisy.json',
                 target_transform=self.target_transform,
                 mode='labeled',
                 pred=pred,
@@ -236,7 +236,7 @@ class AffectNetDataloader(object):
             unlabeled_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det_noisy.json',
                 target_transform=self.target_transform,
                 mode='unlabeled',
                 pred=pred,
