@@ -99,6 +99,7 @@ def get_hist(model):
     losses = torch.cat([clean_losses, noisy_losses])
     losses = (losses - losses.min()) / (losses.max() - losses.min())
 
+    losses = losses.reshape(-1, 1)
     losses = losses.cpu().numpy()
     gmm = GaussianMixture(n_components=2, max_iter=15, reg_covar=5e-4, tol=1e-2)
     gmm.fit(losses)
