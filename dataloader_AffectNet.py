@@ -67,12 +67,12 @@ class AffectNet(Dataset):
         self.data = json.load(open(self.annotation_path))
         self._clean_data(**kwargs)
         if self.mode == "labeled":
-            pred_idx = pred.nonzero()[0]
+            pred_idx = pred.nonzero()
             self.probability = [probability[i] for i in pred_idx]
             self.data['images'] = [x for idx, x in enumerate(self.data['images']) if idx in pred_idx]
             self.data['annotations'] = [x for idx, x in enumerate(self.data['annotations']) if idx in pred_idx]
         elif self.mode == 'unlabeled':
-            pred_idx = (~pred).nonzero()[0]
+            pred_idx = (~pred).nonzero()
             self.probability = [probability[i] for i in pred_idx]
             self.data['images'] = [x for idx, x in enumerate(self.data['images']) if idx in pred_idx]
             self.data['annotations'] = [x for idx, x in enumerate(self.data['annotations']) if idx in pred_idx]

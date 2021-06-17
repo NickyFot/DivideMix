@@ -114,7 +114,7 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
         mixed_target = l * target_a + (1 - l) * target_b
         with torch.cuda.amp.autocast():
             logits = net(mixed_input)
-            
+
             logits_x = logits[:batch_size * 2]
             logits_u = logits[batch_size * 2:]
 
@@ -216,7 +216,7 @@ def eval_train(model, all_loss) -> (list, list):
 
     # fit a two-component GMM to the loss
     gmm = GaussianMixture(n_components=2, n_features=1) #max_iter=10, tol=1e-2, reg_covar=5e-4)
-    gmm.fit(input_loss, n_iter=15)
+    gmm.fit(input_loss, n_iter=20)
     with torch.no_grad():
         prob = gmm.predict_proba(input_loss)
         prob = prob[:, gmm.mu.argmin()]
@@ -311,7 +311,7 @@ if __name__ == '__main__':
         else:
             prob, all_loss[0] = eval_train(net, all_loss[0])
 
-            pred: list = (prob > args.p_threshold)
+            pred = (prob > args.p_threshold)
 
             print('Train Net')
             labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred, prob=prob)
