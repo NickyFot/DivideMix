@@ -11,3 +11,4 @@ __pycache__/
 
 .idea/
 affectnet_annotations_*.json
+noisy_idx.json

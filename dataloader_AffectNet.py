@@ -62,7 +62,7 @@ class AffectNet(Dataset):
             self.data['images'] = [x for idx, x in enumerate(self.data['images']) if idx in pred_idx]
             self.data['annotations'] = [x for idx, x in enumerate(self.data['annotations']) if idx in pred_idx]
         elif self.mode == 'unlabeled':
-            pred_idx = (1 - pred).nonzero()[0]
+            pred_idx = (~pred).nonzero()[0]
             self.probability = [probability[i] for i in pred_idx]
             self.data['images'] = [x for idx, x in enumerate(self.data['images']) if idx in pred_idx]
             self.data['annotations'] = [x for idx, x in enumerate(self.data['annotations']) if idx in pred_idx]
@@ -106,7 +106,7 @@ class AffectNet(Dataset):
         prob = self.probability[idx]
         return img1, img2, target, prob
 
-    def _clean_data(self, filter_expressions: list = None, partition: str = None):
+    def _clean_data(self, filter_expressions: list = None, partition: str = None, artifitial_noise: str = None):
         if filter_expressions:
             new_img = list()
             new_annot = list()
@@ -149,6 +149,16 @@ class AffectNet(Dataset):
             else:
                 self.data['images'] = [img for idx, img in enumerate(self.data['images']) if idx in noisy]
                 self.data['annotations'] = [img for idx, img in enumerate(self.data['annotations']) if idx in noisy]
+        if artifitial_noise:
+            noisy_idx = json.load(open('noisy_idx.json'))
+            clean = [idx for idx, datum in enumerate(self.data['annotations']) if datum['id'] not in noisy_idx]
+            noisy = [idx for idx in range(len(self.data['annotations'])) if idx not in clean]
+            if artifitial_noise == 'clean':
+                self.data['images'] = [img for idx, img in enumerate(self.data['images']) if idx in clean]
+                self.data['annotations'] = [img for idx, img in enumerate(self.data['annotations']) if idx in clean]
+            else:
+                self.data['images'] = [img for idx, img in enumerate(self.data['images']) if idx in noisy]
+                self.data['annotations'] = [img for idx, img in enumerate(self.data['annotations']) if idx in noisy]
 
 
 class AffectNetDataloader(object):
@@ -175,9 +185,11 @@ class AffectNetDataloader(object):
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
         self.target_transform = transforms.Compose([
-            ColumnSelect(['arousal', 'valence']),
+            ColumnSelect(['arousal', 'valence', 'expression']),
             torch.FloatTensor,
-            ReplaceValues(-2, None)
+            # ReplaceValues(-2, None),
+            # Digitize(range=(-1, 1.01), step=0.1),
+            # torch.LongTensor
         ])
         self.filter_expression = list(range(8))
         # self.filter_expression.append(9)  # train on uncertain
@@ -189,7 +201,7 @@ class AffectNetDataloader(object):
             all_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det_noisy.json',
                 target_transform=self.target_transform,
                 mode=None,
                 filter_expressions=self.filter_expression,
@@ -210,7 +222,7 @@ class AffectNetDataloader(object):
             labeled_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det_noisy.json',
                 target_transform=self.target_transform,
                 mode='labeled',
                 pred=pred,
@@ -221,7 +233,7 @@ class AffectNetDataloader(object):
             unlabeled_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det_noisy.json',
                 target_transform=self.target_transform,
                 mode='unlabeled',
                 pred=pred,
@@ -265,13 +277,12 @@ class AffectNetDataloader(object):
             )
             return test_loader
         elif mode == 'eval_train':
-            target_transform = transforms.Compose([ColumnSelect(['arousal', 'valence', 'expression']), torch.FloatTensor])
             eval_dataset = AffectNet(
                 self.root_dir,
                 img_transform=self.transform_train,
-                annotation_filename='affectnet_annotations_train_all_ext_det.json',
+                annotation_filename='affectnet_annotations_train_all_ext_det_noisy.json',
                 mode=None,
-                target_transform=target_transform,
+                target_transform=self.target_transform,
                 filter_expressions=self.filter_expression,
                 **self.kwargs
             )
