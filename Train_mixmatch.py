@@ -112,9 +112,12 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
                 epoch + batch_idx / num_iter,
                 warm_up
             )
-            # pred_mean = logits.mean(dim=0)
-            # penalty = torch.sum(torch.exp(prior) * (prior - torch.log(pred_mean))) / 2
-            penalty = 1 - utils.PCC(logits, mixed_target)
+            # regularization
+            prior = torch.ones(8) / 8
+            prior = prior.cuda()
+            pred_mean = torch.softmax(logits, dim=1).mean(0)
+            penalty = torch.sum(prior * torch.log(prior / pred_mean))
+
             loss = Lx + lamb * Lu + penalty.mean()
             # compute gradient and do SGD step
         scaler.scale(loss).backward()
