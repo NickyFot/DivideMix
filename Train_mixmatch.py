@@ -71,7 +71,7 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
         batch_size = inputs_x.size(0)
 
         # Transform label to one-hot
-        # labels_x = torch.zeros(batch_size, args.num_class).scatter_(1, labels_x.view(-1, 1), 1)
+        labels_x = torch.zeros(batch_size, args.num_class).scatter_(1, labels_x.view(-1, 1), 1)
         w_x = w_x.view(-1, 1).type(torch.FloatTensor)
         inputs_x, inputs_x2, labels_x, w_x = inputs_x.cuda(), inputs_x2.cuda(), labels_x.cuda(), w_x.cuda()
         inputs_u, inputs_u2 = inputs_u.cuda(), inputs_u2.cuda()
@@ -80,12 +80,25 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
             # label guessing of unlabeled samples and augmentations
             outputs_u11 = net(inputs_u)
             outputs_u12 = net(inputs_u2)
-            targets_u = (outputs_u11 + outputs_u12)/2
+
+            pu = (torch.softmax(outputs_u11, dim=1) + torch.softmax(outputs_u12, dim=1) ) / 2
+            ptu = pu ** (1 / args.T)  # temparature sharpening
+
+            targets_u = ptu / ptu.sum(dim=1, keepdim=True)  # normalize
             targets_u = targets_u.detach()
 
-            targets_x = labels_x.detach()
+            # label refinement of labeled samples
+            outputs_x = net(inputs_x)
+            outputs_x2 = net(inputs_x2)
 
-        # mixmatch
+            px = (torch.softmax(outputs_x, dim=1) + torch.softmax(outputs_x2, dim=1)) / 2
+            px = w_x * labels_x + (1 - w_x) * px
+            ptx = px ** (1 / args.T)  # temparature sharpening
+
+            targets_x = ptx / ptx.sum(dim=1, keepdim=True)  # normalize
+            targets_x = targets_x.detach()
+
+            # mixmatch
         l = np.random.beta(args.alpha, args.alpha)
         l = max(l, 1 - l)
 
@@ -101,6 +114,7 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
         mixed_target = l * target_a + (1 - l) * target_b
         with torch.cuda.amp.autocast():
             logits = net(mixed_input)
+            
             logits_x = logits[:batch_size * 2]
             logits_u = logits[batch_size * 2:]
 
