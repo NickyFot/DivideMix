@@ -73,7 +73,7 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
         # Transform label to one-hot
         # labels_x = torch.zeros(batch_size, args.num_class).scatter_(1, labels_x.view(-1, 1), 1)
         w_x = w_x.view(-1, 1).type(torch.FloatTensor)
-        inputs_x, inputs_x2, labels_x, w_x = inputs_x.cuda(), inputs_x2.cuda(), labels_x.cuda(), w_x.cuda()
+        inputs_x, inputs_x2, labels_x, w_x = inputs_x.cuda(), inputs_x2.cuda(), labels_x[:2].cuda(), w_x.cuda()
         inputs_u, inputs_u2 = inputs_u.cuda(), inputs_u2.cuda()
 
         with torch.no_grad():
@@ -133,7 +133,7 @@ def warmup(epoch, net, optimizer, dataloader):
     net.train()
     num_iter = (len(dataloader.dataset) // dataloader.batch_size) + 1
     for batch_idx, (inputs, labels, _) in enumerate(dataloader):
-        inputs, labels = inputs.cuda(), labels.cuda()
+        inputs, labels = inputs.cuda(), labels[:2].cuda()
         optimizer.zero_grad()
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
@@ -141,9 +141,9 @@ def warmup(epoch, net, optimizer, dataloader):
             loss = loss.mean()
             # penalty = torch.abs(labels)
             # loss *= penalty
-            conf_pen = conf_penalty(outputs).mean()
-            loss += conf_pen
-            # conf_pen = torch.tensor([0])
+            # conf_pen = conf_penalty(outputs).mean()
+            # loss += conf_pen
+            conf_pen = torch.tensor([0])
 
 
 
