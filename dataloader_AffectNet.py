@@ -185,7 +185,7 @@ class AffectNetDataloader(object):
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
         self.target_transform = transforms.Compose([
-            ColumnSelect(['arousal', 'valence', 'expression']),
+            ColumnSelect(['arousal', 'valence']), #, 'expression']),
             torch.FloatTensor,
             # ReplaceValues(-2, None),
             # Digitize(range=(-1, 1.01), step=0.1),

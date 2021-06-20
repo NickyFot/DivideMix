@@ -73,7 +73,7 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
         # Transform label to one-hot
         # labels_x = torch.zeros(batch_size, args.num_class).scatter_(1, labels_x.view(-1, 1), 1)
         w_x = w_x.view(-1, 1).type(torch.FloatTensor)
-        inputs_x, inputs_x2, labels_x, w_x = inputs_x.cuda(), inputs_x2.cuda(), labels_x[:2].cuda(), w_x.cuda()
+        inputs_x, inputs_x2, labels_x, w_x = inputs_x.cuda(), inputs_x2.cuda(), labels_x.cuda(), w_x.cuda()
         inputs_u, inputs_u2 = inputs_u.cuda(), inputs_u2.cuda()
 
         with torch.no_grad():
@@ -133,7 +133,7 @@ def warmup(epoch, net, optimizer, dataloader):
     net.train()
     num_iter = (len(dataloader.dataset) // dataloader.batch_size) + 1
     for batch_idx, (inputs, labels, _) in enumerate(dataloader):
-        inputs, labels = inputs.cuda(), labels[:2].cuda()
+        inputs, labels = inputs.cuda(), labels.cuda()
         optimizer.zero_grad()
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
@@ -180,22 +180,22 @@ def eval_train(model, all_loss) -> (list, list):
     model.eval()
     samples_size = len(eval_loader.dataset)
     losses = torch.zeros(samples_size)
-    pred, true, expression = list(), list(), list()
+    # pred, true, expression = list(), list(), list()
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
-            exp = targets[:, 2]
-            inputs, targets = inputs.cuda(), targets[:, :2].cuda()
+            # exp = targets[:, 2]
+            inputs, targets = inputs.cuda(), targets.cuda()
             outputs = model(inputs)
-            pred.append(outputs)
-            true.append(targets)
-            expression.append(exp)
+            # pred.append(outputs)
+            # true.append(targets)
+            # expression.append(exp)
             loss = PSLoss(outputs, targets).mean(dim=1)
             for b in range(inputs.size(0)):
                 losses[index[b]] = loss[b]
-    pred = torch.vstack(pred)
-    true = torch.vstack(true)
-    expression = torch.cat(expression)
-    np.savez('checkpoint/data.npz', pred.cpu(), true.cpu(), expression)
+    # pred = torch.vstack(pred)
+    # true = torch.vstack(true)
+    # expression = torch.cat(expression)
+    # np.savez('checkpoint/data.npz', pred.cpu(), true.cpu(), expression)
     losses = (losses - losses.min()) / (losses.max() - losses.min())
     all_loss.append(losses)
 
