@@ -315,9 +315,7 @@ if __name__ == '__main__':
             batch_size=args.batch_size,
             num_workers=5,
             root_dir=args.data_path,
-            log=None,
-            shuffle=True,
-            pin_memory=True
+            log=None
         )
         eval_loader = loader.run(mode='eval_train')
         test_loader = loader.run(mode='test')
