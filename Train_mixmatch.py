@@ -58,7 +58,7 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
     net.train()
 
     unlabeled_train_iter = iter(unlabeled_trainloader)
-    num_iter = (len(labeled_trainloader.dataset) // args.batch_size) + 1
+    num_iter = (len(labeled_trainloader.dataset) // labeled_trainloader.batch_size) + 1
     for batch_idx, (inputs_x, inputs_x2, labels_x, w_x) in enumerate(labeled_trainloader):
         optimizer.zero_grad()
         try:
