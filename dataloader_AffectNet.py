@@ -243,14 +243,14 @@ class AffectNetDataloader(object):
             )
             labeled_loader = DataLoader(
                 dataset=labeled_dataset,
-                batch_size=self.batch_size*2,
+                batch_size=self.batch_size,
                 shuffle=True,
                 num_workers=self.num_workers,
                 pin_memory=True
             )
             unlabeled_loader = DataLoader(
                 dataset=unlabeled_dataset,
-                batch_size=self.batch_size*2,
+                batch_size=self.batch_size,
                 shuffle=True,
                 num_workers=self.num_workers,
                 pin_memory=True
