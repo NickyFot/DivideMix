@@ -45,8 +45,8 @@ class AffectNet(Dataset):
             target_transform: transforms,
             annotation_filename: str,
             mode: str = None,
-            pred: list = None,
-            probability: list = None,
+            pred: torch.tensor = None,
+            probability: torch.tensor = None,
             **kwargs
     ):
         self.root = root_dir
@@ -57,12 +57,12 @@ class AffectNet(Dataset):
         self.data = json.load(open(self.annotation_path))
         self._clean_data(**kwargs)
         if self.mode == "labeled":
-            pred_idx = pred.nonzero()[0]
+            pred_idx = pred.nonzero()
             self.probability = [probability[i] for i in pred_idx]
             self.data['images'] = [x for idx, x in enumerate(self.data['images']) if idx in pred_idx]
             self.data['annotations'] = [x for idx, x in enumerate(self.data['annotations']) if idx in pred_idx]
         elif self.mode == 'unlabeled':
-            pred_idx = (~pred).nonzero()[0]
+            pred_idx = (~pred).nonzero()
             self.probability = [probability[i] for i in pred_idx]
             self.data['images'] = [x for idx, x in enumerate(self.data['images']) if idx in pred_idx]
             self.data['annotations'] = [x for idx, x in enumerate(self.data['annotations']) if idx in pred_idx]
@@ -185,7 +185,7 @@ class AffectNetDataloader(object):
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ])
         self.target_transform = transforms.Compose([
-            ColumnSelect(['arousal', 'valence']), #, 'expression']),
+            ColumnSelect(['arousal']), #, 'valence']), #, 'expression']),
             torch.FloatTensor,
             # ReplaceValues(-2, None),
             # Digitize(range=(-1, 1.01), step=0.1),

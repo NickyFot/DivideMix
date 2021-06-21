@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import os
 import sys
 from datetime import datetime
@@ -145,8 +143,6 @@ def warmup(epoch, net, optimizer, dataloader):
             # loss += conf_pen
             conf_pen = torch.tensor([0])
 
-
-
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
@@ -229,7 +225,7 @@ class SemiLoss(object):
 
 
 def create_model():
-    model = ResNet18(True, False, variance=False, pretrained=True)
+    model = ResNet18(do_regr=True, do_cls=False, variance=False, pretrained=True)
     if args.load_model:
         state_dct = torch.load(args.load_model, map_location=torch.device('cpu'))
         new_state = dict()
@@ -247,43 +243,43 @@ def save_model(epoch, model, model_num):
     torch.save(model.state_dict(), log_folder +'%s_lr%.1f_epoch%s_ensemble%s' % (args.dataset, args.r, str(epoch), str(model_num)) + '_model.pth')
 
 
-def calculate_prior():
-    # label_dist = Normal(torch.tensor([0.1123, 0.1980]), torch.tensor([0.2989, 0.5137]))  # mean and std of arousal and valence in affectnet
-    dx = torch.arange(-1, 1.1, 0.1)
-    dx = torch.vstack([dx, dx]).permute(1, 0)
-    # p = label_dist.log_prob(dx)
-    # label_dist = Uniform(-1, 1, validate_args=False)
-    label_dist = Normal(0, 0.58)
-    p = label_dist.log_prob(dx)
-    return label_dist, dx.cuda()
+# def calculate_prior():
+#     # label_dist = Normal(torch.tensor([0.1123, 0.1980]), torch.tensor([0.2989, 0.5137]))  # mean and std of arousal and valence in affectnet
+#     dx = torch.arange(-1, 1.1, 0.1)
+#     dx = torch.vstack([dx, dx]).permute(1, 0)
+#     # p = label_dist.log_prob(dx)
+#     # label_dist = Uniform(-1, 1, validate_args=False)
+#     label_dist = Normal(0, 0.58)
+#     p = label_dist.log_prob(dx)
+#     return label_dist, dx.cuda()
 
 
-def conf_penalty(predicted_labels: torch.tensor):
-    predicted_labels = predicted_labels.float()
-    q = torch.zeros_like(predicted_labels)
-    N, D = q.size()
-    for dim in range(D):
-        gmm = GaussianMixture(n_components=2, n_features=1).cuda()
-        fit_data = predicted_labels[:, dim].reshape(-1, 1)
-        gmm.fit(fit_data, n_iter=15)
-        gmm.eval()
-        with torch.no_grad():
-            q[:, dim] = gmm.score_samples(fit_data)
-    with torch.no_grad():
-        p = prior.log_prob(predicted_labels.cpu())
-        p = torch.log(torch.exp(p) + 1e-6)
-        p = p.cuda()
-
-
-    # def gmm_kl(gmm_p, gmm_q, n_samples=10 ** 5):
-    #     X = gmm_p.sample(n_samples)
-    #     log_p_X, _ = gmm_p.score_samples(X)
-    #     log_q_X, _ = gmm_q.score_samples(X)
-    #     return log_p_X.mean() - log_q_X.mean()
-
-    penalty = torch.trapz(torch.exp(p)*(p-q), predicted_labels, dim=1)
-    # print(type(p), type(q), type(penalty))
-    return penalty
+# def conf_penalty(predicted_labels: torch.tensor):
+#     predicted_labels = predicted_labels.float()
+#     q = torch.zeros_like(predicted_labels)
+#     N, D = q.size()
+#     for dim in range(D):
+#         gmm = GaussianMixture(n_components=2, n_features=1).cuda()
+#         fit_data = predicted_labels[:, dim].reshape(-1, 1)
+#         gmm.fit(fit_data, n_iter=15)
+#         gmm.eval()
+#         with torch.no_grad():
+#             q[:, dim] = gmm.score_samples(fit_data)
+#     with torch.no_grad():
+#         p = prior.log_prob(predicted_labels.cpu())
+#         p = torch.log(torch.exp(p) + 1e-6)
+#         p = p.cuda()
+#
+#
+#     # def gmm_kl(gmm_p, gmm_q, n_samples=10 ** 5):
+#     #     X = gmm_p.sample(n_samples)
+#     #     log_p_X, _ = gmm_p.score_samples(X)
+#     #     log_q_X, _ = gmm_q.score_samples(X)
+#     #     return log_p_X.mean() - log_q_X.mean()
+#
+#     penalty = torch.trapz(torch.exp(p)*(p-q), predicted_labels, dim=1)
+#     # print(type(p), type(q), type(penalty))
+#     return penalty
 
 
 if __name__ == '__main__':
@@ -299,16 +295,15 @@ if __name__ == '__main__':
     net = create_model()
     cudnn.benchmark = True
 
-    prior, dx = calculate_prior()
+    # prior, dx = calculate_prior()
     criterion = SemiLoss()
     optimizer = optim.Adam(net.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=5e-4)
 
     PSLoss = nn.L1Loss(reduction='none')
     TrainLoss = nn.MSELoss(reduction='none')
-    # conf_penalty = utils.OneHotProb
 
     all_loss = [[], []]  # save the history of losses from two networks
-    prior, dx = calculate_prior()
+    # prior, dx = calculate_prior()
 
     for epoch in range(args.num_epochs + 1):
         lr = args.lr
@@ -320,7 +315,9 @@ if __name__ == '__main__':
             batch_size=args.batch_size,
             num_workers=5,
             root_dir=args.data_path,
-            log=None
+            log=None,
+            shuffle=True,
+            pin_memory=True
         )
         eval_loader = loader.run(mode='eval_train')
         test_loader = loader.run(mode='test')
@@ -332,11 +329,11 @@ if __name__ == '__main__':
         else:
             prob, all_loss[0] = eval_train(net, all_loss[0])
 
-            pred: list = (prob > args.p_threshold)
+            pred = (prob > args.p_threshold)
 
             print('Train Net')
             labeled_trainloader, unlabeled_trainloader = loader.run(mode='train', pred=pred, prob=prob)
-            train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader)
+            train(epoch=epoch, net=net, optimizer=optimizer, labeled_trainloader=labeled_trainloader, unlabeled_trainloader=unlabeled_trainloader)
         test(epoch, net)
         save_model(epoch, net, 0)
 

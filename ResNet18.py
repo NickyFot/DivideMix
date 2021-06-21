@@ -10,14 +10,14 @@ class ResNet18(nn.Module):
         self.do_regr = do_regr
         self.do_cls = do_cls
         self.do_var = variance
-        self.num_classes_regr = 2
+        self.num_classes_regr = 1
         self.num_classes_cls = 8
 
         backbone = resnet.resnet18(pretrained=pretrained)
         self.backbone = torch.nn.Sequential(*(list(backbone.children())[:-1]))
-        self.linear_regr = nn.Linear(512, 2)
+        self.linear_regr = nn.Linear(512, self.num_classes_regr)
         if self.do_var:
-            self.linear_var = nn.Linear(512, 2)
+            self.linear_var = nn.Linear(512, self.num_classes_regr)
             def mini_init(m):
                 if hasattr(m, 'weight'):
                     nn.init.normal_(m.weight, mean=0, std=0.0001)
