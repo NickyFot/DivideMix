@@ -136,7 +136,7 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
-            loss = loss.mean()
+            loss = torch.sqrt(loss.mean())
             # penalty = torch.abs(labels)
             # loss *= penalty
             # conf_pen = conf_penalty(outputs).mean()
@@ -167,9 +167,9 @@ def test(epoch, net1):
     pred = torch.vstack(pred)
     rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
     pcc = utils.PCC(true, pred)
-    print("\n| Test Epoch #{}\t Arr RMSE: {}, Val RMSE:  {}\n Arr PCC: {} Val PCC: {} \n".format(epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
-    test_log.write('Epoch:{}   Arr RMSE: {}, Val RMSE:  {}, Arr PCC: {} Val PCC: {} \n'.format(epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
-    test_log.flush()
+    print("\n| Test Epoch #{}\t Arr RMSE: {}\n Arr PCC: {}\n".format(epoch, rmse[0], pcc[0]))
+    #test_log.write('Epoch:{}   Arr RMSE: {}, Val RMSE:  {}, Arr PCC: {} Val PCC: {} \n'.format(epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
+    #test_log.flush()
 
 
 def eval_train(model, all_loss) -> (list, list):
@@ -218,8 +218,8 @@ def linear_rampup(current, warm_up, rampup_length=16):
 
 class SemiLoss(object):
     def __call__(self, outputs_x, targets_x, outputs_u, targets_u, epoch, warm_up):
-        Lu = F.mse_loss(outputs_u, targets_u)
-        Lx = F.mse_loss(outputs_x, targets_x)
+        Lu = torch.sqrt(F.mse_loss(outputs_u, targets_u))
+        Lx = torch.sqrt(F.mse_loss(outputs_x, targets_x))
 
         return Lx, Lu, linear_rampup(epoch, warm_up)
 
