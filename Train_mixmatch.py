@@ -165,7 +165,7 @@ def test(epoch, net1):
             pred.append(outputs1)
     true = torch.vstack(true)
     pred = torch.vstack(pred)
-    rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=1))
+    rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=0))
     pcc = utils.PCC(true, pred)
     print("\n| Test Epoch #{}\t Arr RMSE: {}\n Arr PCC: {}\n".format(epoch, rmse[0], pcc[0]))
     #test_log.write('Epoch:{}   Arr RMSE: {}, Val RMSE:  {}, Arr PCC: {} Val PCC: {} \n'.format(epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
