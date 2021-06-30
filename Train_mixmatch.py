@@ -136,7 +136,8 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
-            loss = torch.sqrt(loss.mean())
+            weight = torch.exp(label_dist.log_prob(labels))
+            loss = torch.sqrt(loss.mean())*(1-weight)
             # penalty = torch.abs(labels)
             # loss *= penalty
             # conf_pen = conf_penalty(outputs).mean()
@@ -281,7 +282,7 @@ def save_model(epoch, model, model_num):
 #     # print(type(p), type(q), type(penalty))
 #     return penalty
 
-
+label_dist = Normal(torch.tensor([0.1123]), torch.tensor([0.2989]))
 if __name__ == '__main__':
     start_time = datetime.now().strftime('%Y%m%d_%H%M')
     log_folder = './checkpoint/' + start_time + '/'
