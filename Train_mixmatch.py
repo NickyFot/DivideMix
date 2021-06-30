@@ -137,7 +137,8 @@ def warmup(epoch, net, optimizer, dataloader):
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
             weight = torch.exp(label_dist.log_prob(labels.cpu()).cuda())
-            loss = torch.sqrt(loss.mean())*(1-weight)
+            loss = loss*(1-weight)
+            loss = loss.mean()
             # penalty = torch.abs(labels)
             # loss *= penalty
             # conf_pen = conf_penalty(outputs).mean()
