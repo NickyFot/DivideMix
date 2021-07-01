@@ -2,13 +2,14 @@ import os
 import json
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+from torch.utils.data import Subset
 import torchvision.transforms as transforms
 import random
 import numpy as np
 from PIL import Image
 import cv2
 import torch
-
+from imblearn import over_sampling
 
 class ReplaceValues(object):
     def __init__(self, value, new_value):
@@ -196,7 +197,11 @@ class AffectNetDataloader(object):
 
         self.filter_expression_test = list(range(8))
 
-    def run(self, mode: str, pred: list = [], prob: list = []):
+    def run(self, mode: str, pred: list = [], prob: list = [], **kwargs):
+        if 'oversample' in kwargs:
+            sampler = over_sampling.RandomOverSampler()
+            bins = np.linspace(-1, 1, num=20)
+
         if mode == 'warmup':
             all_dataset = AffectNet(
                 self.root_dir,
@@ -208,6 +213,14 @@ class AffectNetDataloader(object):
                 **self.kwargs
             )
             # debug line
+            if 'oversample' in kwargs:
+                idx = list(range(len(all_dataset)))
+                labels = [y['arousal'] for y in all_dataset.data['annotations']]
+                labels = np.digitize(labels, bins)
+                labels -= 1
+                new_idx, _ = sampler.fit_resample(idx, labels)
+                all_dataset = Subset(all_dataset, new_idx)
+
             print('# Train Images ' + str(len(all_dataset)))
             train_loader = DataLoader(
                 dataset=all_dataset,
@@ -216,6 +229,8 @@ class AffectNetDataloader(object):
                 num_workers=self.num_workers,
                 pin_memory=True
             )
+
+
             return train_loader
 
         elif mode == 'train':
