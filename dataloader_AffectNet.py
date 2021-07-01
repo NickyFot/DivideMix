@@ -220,7 +220,7 @@ class AffectNetDataloader(object):
                 labels = np.digitize(labels, bins)
                 labels -= 1
                 new_idx, _ = sampler.fit_resample(idx, labels)
-                all_dataset = Subset(all_dataset, new_idx.tolist())
+                all_dataset = Subset(all_dataset, new_idx.reshape(-1).tolist())
 
             print('# Train Images ' + str(len(all_dataset)))
             train_loader = DataLoader(
