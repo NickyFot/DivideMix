@@ -215,6 +215,7 @@ class AffectNetDataloader(object):
             # debug line
             if 'oversample' in kwargs:
                 idx = list(range(len(all_dataset)))
+                idx = np.asarray(idx).reshape(-1, 1)
                 labels = [y['arousal'] for y in all_dataset.data['annotations']]
                 labels = np.digitize(labels, bins)
                 labels -= 1
