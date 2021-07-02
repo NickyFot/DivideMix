@@ -136,10 +136,10 @@ def warmup(epoch, net, optimizer, dataloader):
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
             loss = TrainLoss(outputs, labels)
-            weight = torch.exp(label_dist.log_prob(labels.cpu()).cuda())
-            weight = torch.exp(label_dist.log_prob(torch.tensor([0.1123])).cuda()) - weight
-            weight = (weight - weight.min()) / (weight.max() - weight.min())
-            loss = loss*(1-weight)
+            # weight = torch.exp(label_dist.log_prob(labels.cpu()).cuda())
+            # weight = torch.exp(label_dist.log_prob(torch.tensor([0.1123])).cuda()) - weight
+            # weight = (weight - weight.min()) / (weight.max() - weight.min())
+            # loss = loss*(1-weight)
             loss = loss.mean()
             # penalty = torch.abs(labels)
             # loss *= penalty
