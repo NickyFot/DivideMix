@@ -244,7 +244,7 @@ class KLLoss(object):
         return kl
 
 def create_model():
-    model = ResNet18(do_regr=True, do_cls=False, variance=False, pretrained=True)
+    model = ResNet18(do_regr=True, do_cls=False, variance=True, pretrained=True)
     if args.load_model:
         state_dct = torch.load(args.load_model, map_location=torch.device('cpu'))
         new_state = dict()
