@@ -298,7 +298,7 @@ if __name__ == '__main__':
         test_loader = loader.run(mode='test')
 
         if epoch < warm_up:
-            warmup_trainloader = loader.run('warmup', oversample=True)
+            warmup_trainloader = loader.run('warmup') #, oversample=True)
             print('Warmup Net1')
             warmup(epoch, net, optimizer, warmup_trainloader)
         else:
