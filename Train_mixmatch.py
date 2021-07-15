@@ -27,6 +27,7 @@ parser.add_argument('--alpha', default=4, type=float, help='parameter for Beta')
 parser.add_argument('--lambda_u', default=25, type=float, help='weight for unsupervised loss')
 parser.add_argument('--p_threshold', default=0.5, type=float, help='clean probability threshold')
 parser.add_argument('--T', default=0.5, type=float, help='sharpening temperature')
+parser.add_argument('--MC', default=None, type=int, help='Monte Carlo dropout T')
 parser.add_argument('--num_epochs', default=50, type=int)
 parser.add_argument('--warmup', default=30, type=int)
 parser.add_argument('--r', default=0.5, type=float, help='noise ratio')
@@ -110,8 +111,7 @@ def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader):
                 epoch + batch_idx / num_iter,
                 warm_up
             )
-            # pred_mean = logits.mean(dim=0)
-            # penalty = torch.sum(torch.exp(prior) * (prior - torch.log(pred_mean))) / 2
+
             penalty = 1 - utils.PCC(logits, mixed_target)
             loss = Lx + lamb * Lu + penalty.mean()
             # compute gradient and do SGD step
@@ -135,16 +135,10 @@ def warmup(epoch, net, optimizer, dataloader):
         optimizer.zero_grad()
         with torch.cuda.amp.autocast():
             outputs = net(inputs)
-            loss = TrainLoss(outputs, labels)
-            # weight = torch.exp(label_dist.log_prob(labels.cpu()).cuda())
-            # weight = torch.exp(label_dist.log_prob(torch.tensor([0.1123])).cuda()) - weight
-            # weight = (weight - weight.min()) / (weight.max() - weight.min())
-            # loss = loss*(1-weight)
+            y_pred = outputs['regr']
+            est_var = outputs['var']
+            loss = TrainLoss(y_pred, labels, est_var)
             loss = loss.mean()
-            # penalty = torch.abs(labels)
-            # loss *= penalty
-            # conf_pen = conf_penalty(outputs).mean()
-            # loss += conf_pen
             conf_pen = torch.tensor([0])
 
         scaler.scale(loss).backward()
@@ -166,36 +160,36 @@ def test(epoch, net1):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs1 = net1(inputs)
             true.append(targets)
-            pred.append(outputs1)
+            pred.append(outputs1['regr'])
     true = torch.vstack(true)
     pred = torch.vstack(pred)
     rmse = torch.sqrt(F.mse_loss(true, pred, reduction='none').mean(dim=0))
     pcc = utils.PCC(true, pred)
     print("\n| Test Epoch #{}\t Arr RMSE: {}\n Arr PCC: {}\n".format(epoch, rmse[0], pcc[0]))
-    #test_log.write('Epoch:{}   Arr RMSE: {}, Val RMSE:  {}, Arr PCC: {} Val PCC: {} \n'.format(epoch, rmse[0], rmse[1], pcc[0], pcc[1]))
-    #test_log.flush()
 
 
 def eval_train(model, all_loss) -> (list, list):
     model.eval()
+    utils.enable_dropout(model)
     samples_size = len(eval_loader.dataset)
     losses = torch.zeros(samples_size)
-    # pred, true, expression = list(), list(), list()
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
-            # exp = targets[:, 2]
             inputs, targets = inputs.cuda(), targets.cuda()
-            outputs = model(inputs)
-            # pred.append(outputs)
-            # true.append(targets)
-            # expression.append(exp)
-            loss = PSLoss(outputs, targets).mean(dim=1)
+            if args.MC:
+                outputs = torch.empty((targets.size(0), args.MC, targets.size(1)))
+                variances = torch.empty((targets.size(0), args.MC, targets.size(1)))
+                for t in args.MC:
+                    out = model(inputs)
+                    outputs[:, t, :] = out['regr']
+                    variances[:, t, :] = out['var']
+            else:
+                out = model(inputs)
+                outputs = out['regr']
+                variances = out['var']
+            loss = PSLoss(outputs, variances).mean(dim=1)
             for b in range(inputs.size(0)):
                 losses[index[b]] = loss[b]
-    # pred = torch.vstack(pred)
-    # true = torch.vstack(true)
-    # expression = torch.cat(expression)
-    # np.savez('checkpoint/data.npz', pred.cpu(), true.cpu(), expression)
     losses = (losses - losses.min()) / (losses.max() - losses.min())
     all_loss.append(losses)
 
@@ -228,6 +222,27 @@ class SemiLoss(object):
         return Lx, Lu, linear_rampup(epoch, warm_up)
 
 
+class Variance(object):
+    def __call__(self, y_pred, est_var):
+        y_1 = torch.pow(y_pred, 2).mean(dim=0)
+        y_2 = torch.pow(y_pred.mean(dim=0), 2)
+        sigma = torch.exp(est_var).mean(dim=0)
+        var = y_1 - y_2 + sigma
+        return var
+
+
+class KLLoss(object):
+    def __init__(self, reduction='None'):
+        self.reduction = reduction
+
+    def __call__(self, y_pred, y_true, est_var):
+        kl = 0.5*torch.exp(-est_var) * torch.pow((y_true - y_pred), 2) + 0.5*est_var
+        if self.reduction == 'mean':
+            kl = kl.mean()
+        elif self.reduction == 'sum':
+            kl = kl.sum()
+        return kl
+
 def create_model():
     model = ResNet18(do_regr=True, do_cls=False, variance=False, pretrained=True)
     if args.load_model:
@@ -237,7 +252,6 @@ def create_model():
             new_state[key.replace('module.', '')] = state_dct[key]
         model.load_state_dict(new_state)
     if args.multigpu:
-        # torch.cuda.set_per_process_memory_fraction(0.4, device=0)
         model = nn.DataParallel(model)
     model = model.cuda()
     return model
@@ -246,46 +260,6 @@ def create_model():
 def save_model(epoch, model, model_num):
     torch.save(model.state_dict(), log_folder +'%s_lr%.1f_epoch%s_ensemble%s' % (args.dataset, args.r, str(epoch), str(model_num)) + '_model.pth')
 
-
-# def calculate_prior():
-#     # label_dist = Normal(torch.tensor([0.1123, 0.1980]), torch.tensor([0.2989, 0.5137]))  # mean and std of arousal and valence in affectnet
-#     dx = torch.arange(-1, 1.1, 0.1)
-#     dx = torch.vstack([dx, dx]).permute(1, 0)
-#     # p = label_dist.log_prob(dx)
-#     # label_dist = Uniform(-1, 1, validate_args=False)
-#     label_dist = Normal(0, 0.58)
-#     p = label_dist.log_prob(dx)
-#     return label_dist, dx.cuda()
-
-
-# def conf_penalty(predicted_labels: torch.tensor):
-#     predicted_labels = predicted_labels.float()
-#     q = torch.zeros_like(predicted_labels)
-#     N, D = q.size()
-#     for dim in range(D):
-#         gmm = GaussianMixture(n_components=2, n_features=1).cuda()
-#         fit_data = predicted_labels[:, dim].reshape(-1, 1)
-#         gmm.fit(fit_data, n_iter=15)
-#         gmm.eval()
-#         with torch.no_grad():
-#             q[:, dim] = gmm.score_samples(fit_data)
-#     with torch.no_grad():
-#         p = prior.log_prob(predicted_labels.cpu())
-#         p = torch.log(torch.exp(p) + 1e-6)
-#         p = p.cuda()
-#
-#
-#     # def gmm_kl(gmm_p, gmm_q, n_samples=10 ** 5):
-#     #     X = gmm_p.sample(n_samples)
-#     #     log_p_X, _ = gmm_p.score_samples(X)
-#     #     log_q_X, _ = gmm_q.score_samples(X)
-#     #     return log_p_X.mean() - log_q_X.mean()
-#
-#     penalty = torch.trapz(torch.exp(p)*(p-q), predicted_labels, dim=1)
-#     # print(type(p), type(q), type(penalty))
-#     return penalty
-
-label_dist = Normal(torch.tensor([0.1123]), torch.tensor([0.2989]))
 
 if __name__ == '__main__':
     start_time = datetime.now().strftime('%Y%m%d_%H%M')
@@ -300,15 +274,13 @@ if __name__ == '__main__':
     net = create_model()
     cudnn.benchmark = True
 
-    # prior, dx = calculate_prior()
     criterion = SemiLoss()
     optimizer = optim.Adam(net.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=5e-4)
 
-    PSLoss = nn.L1Loss(reduction='none')
-    TrainLoss = nn.MSELoss(reduction='none')
+    PSLoss = Variance()
+    TrainLoss = KLLoss(reduction='none')
 
     all_loss = [[], []]  # save the history of losses from two networks
-    # prior, dx = calculate_prior()
 
     for epoch in range(args.num_epochs + 1):
         lr = args.lr

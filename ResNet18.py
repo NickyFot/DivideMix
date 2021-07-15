@@ -14,7 +14,8 @@ class ResNet18(nn.Module):
         self.num_classes_cls = 8
 
         backbone = resnet.resnet18(pretrained=pretrained)
-        self.backbone = torch.nn.Sequential(*(list(backbone.children())[:-1]))
+        self.backbone = nn.Sequential(*(list(backbone.children())[:-1]))
+        self.dropout = nn.Dropout(0.5)
         self.linear_regr = nn.Linear(512, self.num_classes_regr)
         if self.do_var:
             self.linear_var = nn.Linear(512, self.num_classes_regr)
@@ -27,6 +28,7 @@ class ResNet18(nn.Module):
     def forward(self, x):
         out = self.backbone(x)
         out = out.view(out.size(0), -1)
+        out = self.dropout(out)
         preds = {}
         preds['feats'] = out
         if self.do_regr:
@@ -39,4 +41,4 @@ class ResNet18(nn.Module):
         if self.do_var:
             var = self.linear_var(out)
             preds['var'] = var
-        return preds['regr']  # TODO: handle dict for variance
+        return preds
